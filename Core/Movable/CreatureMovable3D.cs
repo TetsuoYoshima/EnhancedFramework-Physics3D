@@ -7,616 +7,16 @@
 using EnhancedEditor;
 using EnhancedFramework.Core;
 using System;
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
-using UnityEngine.AI;
 
 using static EnhancedFramework.Core.AdvancedCurveValue;
 
 namespace EnhancedFramework.Physics3D {
     /// <summary>
-    /// <see cref="NavigationPath3D"/>-related wrapper for a single path operation.
-    /// </summary>
-    public struct PathHandler : IHandler<NavigationPath3D> {
-        #region Global Members
-        private Handler<NavigationPath3D> handler;
-
-        // -----------------------
-
-        public int ID {
-            get { return handler.ID; }
-        }
-
-        public bool IsValid {
-            get { return GetHandle(out _); }
-        }
-
-        // -------------------------------------------
-        // Constructor(s)
-        // -------------------------------------------
-
-        /// <inheritdoc cref="PathHandler(NavigationPath3D, int)"/>
-        public PathHandler(NavigationPath3D _path) {
-            handler = new Handler<NavigationPath3D>(_path);
-        }
-
-        /// <param name="_path"><see cref="NavigationPath3D"/> used for navigation.</param>
-        /// <param name="_id">ID of the associated navigation operation.</param>
-        /// <inheritdoc cref="PathHandler"/>
-        public PathHandler(NavigationPath3D _path, int _id) {
-            handler = new Handler<NavigationPath3D>(_path, _id);
-        }
-        #endregion
-
-        #region Navigation
-        /// <inheritdoc cref="NavigationPath3D.UpdatePath"/>
-        public bool UpdatePath() {
-            if (!GetHandle(out NavigationPath3D _path)) {
-                return false;
-            }
-
-            return _path.UpdatePath();
-        }
-
-        /// <inheritdoc cref="NavigationPath3D.GetNextPosition(out Vector3)"/>
-        public bool GetNextPosition(out Vector3 _position) {
-            if (!GetHandle(out NavigationPath3D _path)) {
-
-                _position = Vector3.zero;
-                return false;
-            }
-
-            return _path.GetNextPosition(out _position);
-        }
-
-        /// <inheritdoc cref="NavigationPath3D.GetNextDistance(out Vector3)"/>
-        public bool GetNextDistance(out Vector3 _distance) {
-            if (!GetHandle(out NavigationPath3D _path)) {
-
-                _distance = Vector3.zero;
-                return false;
-            }
-
-            return _path.GetNextDistance(out _distance);
-        }
-
-        /// <inheritdoc cref="NavigationPath3D.GetNextDirection(out Vector3)"/>
-        public bool GetNextDirection(out Vector3 _direction) {
-            if (!GetHandle(out NavigationPath3D _path)) {
-
-                _direction = Vector3.zero;
-                return false;
-            }
-
-            return _path.GetNextDirection(out _direction);
-        }
-        #endregion
-
-        #region Utility
-        public bool GetHandle(out NavigationPath3D _path) {
-            return handler.GetHandle(out _path) && _path.IsActive;
-        }
-
-        /// <summary>
-        /// Resumes this handle associated <see cref="NavigationPath3D"/>.
-        /// </summary>
-        /// <inheritdoc cref="NavigationPath3D.Resume()"/>
-        public bool Resume() {
-            if (!GetHandle(out NavigationPath3D _path)) {
-                return false;
-            }
-
-            return _path.Resume();
-        }
-
-        /// <summary>
-        /// Pauses this handle associated <see cref="NavigationPath3D"/>.
-        /// </summary>
-        /// <inheritdoc cref="NavigationPath3D.Pause"/>
-        public bool Pause() {
-            if (!GetHandle(out NavigationPath3D _path)) {
-                return false;
-            }
-
-            return _path.Pause();
-        }
-
-        /// <summary>
-        /// Stops this handle associated <see cref="NavigationPath3D"/>.
-        /// </summary>
-        /// <inheritdoc cref="NavigationPath3D.Cancel"/>
-        public bool Cancel() {
-            if (!GetHandle(out NavigationPath3D _player)) {
-                return false;
-            }
-
-            return _player.Cancel();
-        }
-
-        /// <summary>
-        /// Stops this handle associated <see cref="NavigationPath3D"/>.
-        /// </summary>
-        /// <inheritdoc cref="NavigationPath3D.Complete"/>
-        public bool Complete() {
-            if (!GetHandle(out NavigationPath3D _path)) {
-                return false;
-            }
-
-            return _path.Complete();
-        }
-        #endregion
-    }
-
-    /// <summary>
-    /// <see cref="CreatureMovable3D"/>-related path wrapper class.
-    /// </summary>
-    [Serializable]
-    public sealed class NavigationPath3D : IHandle, IPoolableObject {
-        #region State
-        /// <summary>
-        /// References all available states for an <see cref="NavigationPath3D"/>.
-        /// </summary>
-        public enum State {
-            Inactive    = 0,
-            Active      = 1,
-            Paused      = 2,
-        }
-        #endregion
-
-        #region Global Members
-        private int id = 0;
-        private State state = State.Inactive;
-        private CreatureMovable3D movable = null;
-
-        private readonly List<Vector3> path = new List<Vector3>();
-        private int index = -1;
-
-        private bool useFinalRotation = false;
-        private Quaternion finalRotation = Quaternion.identity;
-
-        /// <summary>
-        /// Called when this path is completed.
-        /// <para/>
-        /// Parameters are: 
-        /// <br/> • A boolean indicating whether the path was fully completed, or prematurely stopped.
-        /// <br/> • The associated <see cref="CreatureMovable3D"/>.
-        /// </summary>
-        public Action<bool, CreatureMovable3D> OnComplete = null;
-
-        // -----------------------
-
-        /// <inheritdoc cref="IHandle.ID"/>
-        public int ID {
-            get { return id; }
-        }
-
-        /// <summary>
-        /// Current state of this path.
-        /// </summary>
-        public State Status {
-            get { return state; }
-        }
-
-        /// <summary>
-        /// Indicate whether this path is currently active or not.
-        /// </summary>
-        public bool IsActive {
-            get { return (index != -1) && (state != State.Inactive); }
-        }
-
-        /// <summary>
-        /// Index of the current path destination position.
-        /// </summary>
-        public int Index {
-            get { return index; }
-        }
-        #endregion
-
-        #region Path
-        /// <summary>
-        /// Minimum distance from the current destination to be considered as reached, on the X and Z axises.
-        /// </summary>
-        public const float MinFlatDestinationDistance = .01f;
-
-        /// <summary>
-        /// Minimum distance from the current destination to be considered as reached, on the Y axis.
-        /// </summary>
-        public const float MinVerticalDestinationDistance = .25f;
-
-        /// <summary>
-        /// Maximum distance used to sample the nav mesh data for navigation.
-        /// </summary>
-        public const float MaxNavMeshDistance = 9f;
-
-        private static readonly Vector3[] pathBuffer    = new Vector3[16];
-        private static NavMeshPath navMeshPath          = null; // Instantiation is not allowed to be called on initialization.
-        private static int lastID = 0;
-
-        // -----------------------
-
-        /// <summary>
-        /// Set this navigation path destination position.
-        /// </summary>
-        /// <param name="_movable">Object to set this navigation path for.</param>
-        /// <param name="_destination">Destination position of this path.</param>
-        /// <param name="_onComplete"><inheritdoc cref="OnComplete" path="/summary"/></param>
-        /// <returns><see cref="PathHandler"/> of this navigation operation.</returns>
-        internal PathHandler Setup(CreatureMovable3D _movable, Vector3 _destination, Action<bool, CreatureMovable3D> _onComplete = null) {
-            // Cancel previous operation.
-            Cancel();
-
-            navMeshPath.ClearCorners();
-            path.Clear();
-
-            // Calculate path.
-            if (NavMesh.SamplePosition(_destination, out NavMeshHit _hit, MaxNavMeshDistance, NavMesh.AllAreas)
-             && NavMesh.CalculatePath(_movable.Transform.position, _hit.position, NavMesh.AllAreas, navMeshPath)) {
-
-                int _pathCount = navMeshPath.GetCornersNonAlloc(pathBuffer);
-                for (int i = 0; i < _pathCount; i++) {
-                    path.Add(pathBuffer[i]);
-                }
-            } else {
-
-                path.Add(_destination);
-                this.LogWarningMessage("Path calcul could not be performed");
-            }
-
-            index = 0;
-            return CreateHandler(_movable, _onComplete);
-        }
-
-        /// <summary>
-        /// Set all this navigation path positions and destination.
-        /// </summary>
-        /// <param name="_path">All positions to initialize this path with.</param>
-        /// <inheritdoc cref="Setup(CreatureMovable3D, Vector3, Action{bool, CreatureMovable3D})"/>
-        internal PathHandler Setup(CreatureMovable3D _movable, Vector3[] _path, Action<bool, CreatureMovable3D> _onComplete = null) {
-
-            // Cancel previous operation.
-            Cancel();
-
-            path.Clear();
-            path.AddRange(_path);
-
-            index = (_path.Length != 0) ? 0 : -1;
-            return CreateHandler(_movable, _onComplete);
-        }
-
-        /// <param name="_finalRotation">Final rotation of the object.</param>
-        /// <inheritdoc cref="Setup(CreatureMovable3D, Vector3, Action{bool, CreatureMovable3D})"/>
-        internal PathHandler Setup(CreatureMovable3D _movable, Vector3 _destination, Quaternion _finalRotation, Action<bool, CreatureMovable3D> _onComplete = null) {
-            PathHandler _handler = Setup(_movable, _destination, _onComplete);
-            SetFinalRotation(_finalRotation);
-
-            return _handler;
-        }
-
-        /// <param name="_finalRotation">Final rotation of the object.</param>
-        /// <inheritdoc cref="Setup(CreatureMovable3D, Vector3[], Action{bool, CreatureMovable3D})"/>
-        internal PathHandler Setup(CreatureMovable3D _movable, Vector3[] _path, Quaternion _finalRotation, Action<bool, CreatureMovable3D> _onComplete = null) {
-            PathHandler _handler = Setup(_movable, _path, _onComplete);
-            SetFinalRotation(_finalRotation);
-
-            return _handler;
-        }
-
-        /// <param name="_destination">Destination position and rotation of this path.</param>
-        /// <param name="_useRotation">Whether to rotate the object in the transform direction on completion or not.</param>
-        /// <inheritdoc cref="Setup(CreatureMovable3D, Vector3, Action{bool, CreatureMovable3D})"/>
-        internal PathHandler Setup(CreatureMovable3D _movable, Transform _destination, bool _useRotation, Action<bool, CreatureMovable3D> _onComplete = null) {
-            PathHandler _handler = Setup(_movable, _destination.position, _onComplete);
-
-            if (_useRotation) {
-                SetFinalRotation(_destination.rotation);
-            }
-
-            return _handler;
-        }
-
-        // -------------------------------------------
-        // Behaviour
-        // -------------------------------------------
-
-        /// <summary>
-        /// Pauses this path current navigation.
-        /// </summary>
-        public bool Pause() {
-
-            // Ignore if not active.
-            if (state != State.Active) {
-                return false;
-            }
-
-            SetState(State.Paused);
-            return true;
-        }
-
-        /// <summary>
-        /// Resumes this path current navigation.
-        /// </summary>
-        public bool Resume() {
-
-            // Ignore if not paused.
-            if (state != State.Paused) {
-                return false;
-            }
-
-            SetState(State.Active);
-            return true;
-        }
-
-        /// <summary>
-        /// Cancels this path current navigation.
-        /// </summary>
-        public bool Cancel() {
-            return Stop(false);
-        }
-
-        /// <summary>
-        /// Completes this path current navigation.
-        /// </summary>
-        public bool Complete() {
-
-            // Ignore if already inactive.
-            if (state == State.Inactive) {
-                return false;
-            }
-
-            // Teleport to destination.
-            if (path.SafeLast(out Vector3 _position)) {
-
-                if (useFinalRotation) {
-                    movable.SetPositionAndRotation(_position, finalRotation);
-                } else {
-                    movable.SetPosition(_position);
-                }
-            }
-
-            Stop(true);
-            return true;
-        }
-
-        // -------------------------------------------
-        // Utility
-        // -------------------------------------------
-
-        private PathHandler CreateHandler(CreatureMovable3D _movable, Action<bool, CreatureMovable3D> _onComplete) {
-            OnComplete = _onComplete;
-            movable = _movable;
-
-            SetState(State.Active);
-
-            id = ++lastID;
-            return new PathHandler(this, id);
-        }
-
-        private void SetFinalRotation(Quaternion _rotation) {
-            useFinalRotation = true;
-            finalRotation = _rotation;
-        }
-
-        private bool Stop(bool _isCompleted) {
-
-            // Ignore if already inactive.
-            if (state == State.Inactive) {
-                return false;
-            }
-
-            // State.
-            SetState(State.Inactive);
-            id = 0;
-
-            index = -1;
-            useFinalRotation = false;
-            movable.OnCompleteNavigation(_isCompleted);
-
-            // Callback.
-            OnComplete?.Invoke(_isCompleted, movable);
-
-            OnComplete = null;
-            movable = null;
-
-            NavigationPath3DManager.Release(this);
-            return true;
-        }
-        #endregion
-
-        #region Navigation
-        /// <summary>
-        /// Update this path.
-        /// </summary>
-        /// <returns><inheritdoc cref="GetNextDistance(out Vector3)" path="/returns"/></returns>
-        public bool UpdatePath() {
-            if (!GetNextDistance(out Vector3 _distance)) {
-                return false;
-            }
-
-            _distance = _distance.RotateInverse(movable.Transform.rotation);
-
-            if ((_distance.Flat().magnitude <= MinFlatDestinationDistance) && (Mathf.Abs(_distance.y) <= MinVerticalDestinationDistance)) {
-
-                // Path end.
-                if (index == (path.Count - 1)) {
-
-                    // Wait for completion.
-                    movable.DoCompleteNavigation(out bool _completed);
-                    if (!_completed) {
-                        return true;
-                    }
-
-                    // Final rotation.
-                    if (useFinalRotation) {
-                        movable.TurnTo(finalRotation.ToDirection());
-                    }
-
-                    Stop(true);
-                    return false;
-                }
-
-                index++;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Get the next target position on this path.
-        /// </summary>
-        /// <param name="_position">Next destination position on the path.</param>
-        /// <returns>True if the path is active and a new destination was found, false otherwise.</returns>
-        public bool GetNextPosition(out Vector3 _position) {
-            if (!IsActive) {
-                _position = Vector3.zero;
-                return false;
-            }
-
-            _position = path[index];
-            return true;
-        }
-
-        /// <summary>
-        /// Get the distance between an object and the next desination position.
-        /// </summary>
-        /// <param name="_distance">Distance between the object and its next destination position, not normalized.</param>
-        /// <returns>True if the path is active and a new destination was found, false otherwise.</returns>
-        public bool GetNextDistance(out Vector3 _distance) {
-            if (!IsActive) {
-                _distance = Vector3.zero;
-                return false;
-            }
-
-            // Paused state.
-            if (state == State.Paused) {
-                _distance = Vector3.zero;
-                return true;
-            }
-
-            Transform _transform = movable.Transform;
-            _distance = path[index] - _transform.position;
-
-            return true;
-        }
-
-        /// <summary>
-        /// Get the direction to the next destination position.
-        /// <para/>
-        /// Similar to <see cref="GetNextDistance(out Vector3)"/>,
-        /// but only on the object X and Z axises.
-        /// </summary>
-        /// <param name="_direction">Direction to the next destination position, not normalized.</param>
-        /// <returns><inheritdoc cref="GetNextDistance(out Vector3)" path="/returns"/></returns>
-        public bool GetNextDirection(out Vector3 _direction) {
-            if (!GetNextDistance(out _direction)) {
-                return false;
-            }
-
-            // Removes the vertical component of the direction.
-            Quaternion _rotation = movable.Transform.rotation;
-            _direction = _direction.RotateInverse(_rotation).SetY(0f).Rotate(_rotation);
-
-            return true;
-        }
-        #endregion
-
-        #region Pool
-        void IPoolableObject.OnCreated(IObjectPool _pool) {
-
-            // Create nav mesh helper.
-            navMeshPath ??= new NavMeshPath();
-        }
-
-        void IPoolableObject.OnRemovedFromPool() { }
-
-        void IPoolableObject.OnSentToPool() {
-
-            // Make sure the navigation is not active.
-            Cancel();
-        }
-        #endregion
-
-        #region Utility
-        /// <summary>
-        /// Sets the state of this object.
-        /// </summary>
-        /// <param name="_state">New state of this object.</param>
-        private void SetState(State _state) {
-            state = _state;
-        }
-        #endregion
-    }
-
-    /// <summary>
-    /// <see cref="NavigationPath3D"/> pool managing class.
-    /// </summary>
-    internal sealed class NavigationPath3DManager : IObjectPoolManager<NavigationPath3D> {
-        #region Pool
-        private static readonly ObjectPool<NavigationPath3D> pool = new ObjectPool<NavigationPath3D>(1);
-        public static readonly NavigationPath3DManager Instance   = new NavigationPath3DManager();
-
-        /// <inheritdoc cref="NavigationPath3DManager"/>
-        private NavigationPath3DManager() {
-
-            // Pool initialization.
-            pool.Initialize(this);
-        }
-
-        // -----------------------
-
-        /// <summary>
-        /// Get a <see cref="NavigationPath3D"/> instance from the pool.
-        /// </summary>
-        /// <inheritdoc cref="ObjectPool{T}.GetPoolInstance"/>
-        public static NavigationPath3D Get() {
-            return pool.GetPoolInstance();
-        }
-
-        /// <summary>
-        /// Releases a specific <see cref="NavigationPath3D"/> instance and sent it back to the pool.
-        /// </summary>
-        /// <inheritdoc cref="ObjectPool{T}.ReleasePoolInstance(T)"/>
-        public static bool Release(NavigationPath3D _call) {
-            return pool.ReleasePoolInstance(_call);
-        }
-
-        /// <summary>
-        /// Clears the <see cref="NavigationPath3D"/> pool content.
-        /// </summary>
-        /// <inheritdoc cref="ObjectPool{T}.ClearPool(int)"/>
-        public static void ClearPool(int _capacity = 1) {
-            pool.ClearPool(_capacity);
-        }
-
-        // -------------------------------------------
-        // Manager
-        // -------------------------------------------
-
-        NavigationPath3D IObjectPool<NavigationPath3D>.GetPoolInstance() {
-            return Get();
-        }
-
-        bool IObjectPool<NavigationPath3D>.ReleasePoolInstance(NavigationPath3D _call) {
-            return Release(_call);
-        }
-
-        void IObjectPool.ClearPool(int _capacity) {
-            ClearPool(_capacity);
-        }
-
-        NavigationPath3D IObjectPoolManager<NavigationPath3D>.CreateInstance() {
-            return new NavigationPath3D();
-        }
-
-        void IObjectPoolManager<NavigationPath3D>.DestroyInstance(NavigationPath3D _call) {
-            // Cannot destroy the instance, so simply ignore the object and wait for the garbage collector to pick it up.
-        }
-        #endregion
-    }
-
-    /// <summary>
     /// Advanced <see cref="Movable3D"/> with the addition of various creature-like behaviours.
     /// </summary>
-    [AddComponentMenu(FrameworkUtility.MenuPath + "Physics 3D/Creature Movable 3D"), DisallowMultipleComponent]
+    [AddComponentMenu(FrameworkUtility.MenuPath + "Physics [3D]/Creature Movable [3D]"), DisallowMultipleComponent]
     public sealed class CreatureMovable3D : Movable3D {
         #region Rotation Mode
         /// <summary>
@@ -641,17 +41,45 @@ namespace EnhancedFramework.Physics3D {
         #endregion
 
         #region Global Members
-        [Space(5f), PropertyOrder(1)]
+        [Section("Creature Movable [3D]"), PropertyOrder(0)]
 
+        [Tooltip("Property attributes of this Movable")]
         [SerializeField, Enhanced, Required] private CreatureMovable3DAttributes attributes = null;
 
         [PropertyOrder(3)]
 
+        [Tooltip("Current forward direction of the object")]
         [SerializeField, Enhanced, ReadOnly] private Vector3 forward = Vector3.zero;
 
         // -----------------------
 
-        public override bool IsSpeedEditable {
+        public override Movable3DGroundSettings GroundSettings {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get {
+                #if UNITY_EDITOR
+                return attributes.GroundSettings;
+                #else
+                return groundSettings;
+                #endif
+            }
+        }
+
+        public override Movable3DWeightSettings WeightSettings {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get {
+                #if UNITY_EDITOR
+                return attributes.WeightSettings;
+                #else
+                return weightSettings;
+                #endif
+            }
+        }
+
+        public override bool CanEditSpeed {
+            get { return false; }
+        }
+
+        public override bool CanEditSettings {
             get { return false; }
         }
 
@@ -661,6 +89,37 @@ namespace EnhancedFramework.Physics3D {
 
         public override float SnapHeight {
             get { return attributes.SnapHeight; }
+        }
+        #endregion
+
+        #region Enhanced Behaviour
+        protected override void OnInit() {
+            // Settings.
+            SetAttributesSettings();
+
+            base.OnInit();
+        }
+
+        #if UNITY_EDITOR
+        // -------------------------------------------
+        // Editor
+        // -------------------------------------------
+
+        protected override void OnValidate() {
+            base.OnValidate();
+
+            // Settings.
+            SetAttributesSettings();
+        }
+        #endif
+
+        // -------------------------------------------
+        // Utility
+        // -------------------------------------------
+
+        private void SetAttributesSettings() {
+            groundSettings = attributes.GroundSettings;
+            weightSettings = attributes.WeightSettings;
         }
         #endregion
 
@@ -835,7 +294,7 @@ namespace EnhancedFramework.Physics3D {
                 return true;
             }
 
-            _completed = lastPathMovement.IsNull();
+            _completed = lastPathMovement.IsNull() || lastPathDirection.IsNull();
             return false;
         }
 
@@ -944,7 +403,7 @@ namespace EnhancedFramework.Physics3D {
         }
 
         // -------------------------------------------
-        // Utility
+        // Internal
         // -------------------------------------------
 
         /// <summary>
@@ -1001,12 +460,21 @@ namespace EnhancedFramework.Physics3D {
         // --- Velocity --- \\
 
         #region Velocity
-        public override bool ResetVelocity() {
-            if (base.ResetVelocity()) {
+        public override bool ResetVelocity(bool _force = false) {
+            if (base.ResetVelocity(_force)) {
+                return true;
+            }
+
+            // Ignore when following a path.
+            if (!_force && path.IsValid) {
                 return true;
             }
 
             ResetSpeed();
+
+            isChangingDirection = false;
+            lastMovement = Vector3.zero;
+
             return false;
         }
         #endregion
@@ -1021,8 +489,8 @@ namespace EnhancedFramework.Physics3D {
         /// Updates this object speed, for this frame (increase or decrease).
         /// </summary>
         /// <returns><inheritdoc cref="Movable3D.Doc" path="/returns"/></returns>
-        private bool UpdateSpeed() {
-            if (speedController.OnUpdateSpeed()) {
+        private bool UpdateSpeed(ref float _speed, float _deltaTime) {
+            if (speedController.OnUpdateSpeed(ref _speed)) {
                 return true;
             }
 
@@ -1030,9 +498,9 @@ namespace EnhancedFramework.Physics3D {
             Vector3 _movement = GetRelativeVector(Velocity.Movement + Velocity.InstantMovement).Flat();
 
             if (_movement.IsNull()) {
-                DecreaseSpeed();
+                DecreaseSpeed(ref _speed, _deltaTime);
             } else {
-                IncreaseSpeed();
+                IncreaseSpeed(ref _speed, _deltaTime);
             }
 
             return false;
@@ -1042,17 +510,19 @@ namespace EnhancedFramework.Physics3D {
         /// Increases this object speed.
         /// </summary>
         /// <returns><inheritdoc cref="Movable3D.Doc" path="/returns"/></returns>
-        public bool IncreaseSpeed() {
-            if (speedController.OnIncreaseSpeed()) {
+        public bool IncreaseSpeed(ref float _speed, float _deltaTime) {
+            if (speedController.OnIncreaseSpeed(ref _speed)) {
                 return true;
             }
 
-            float _increase = DeltaTime;
+            PhysicsSurface3D.Settings _physicsSurface = PhysicsSurface;
+            float _increase = _deltaTime * _physicsSurface.IncreaseSpeedCoef;
+
             if (!IsGrounded) {
                 _increase *= attributes.AirAccelCoef;
             }
 
-            speed = attributes.MoveSpeed.EvaluateContinue(ref speedTimeVar, _increase);
+            _speed = attributes.MoveSpeed.EvaluateContinue(ref speedTimeVar, _increase, _physicsSurface.MaxSpeedCoef);
             decreaseWrapper.Reset();
 
             return false;
@@ -1062,12 +532,15 @@ namespace EnhancedFramework.Physics3D {
         /// Decreases this object speed.
         /// </summary>
         /// <returns><inheritdoc cref="Movable3D.Doc" path="/returns"/></returns>
-        public bool DecreaseSpeed() {
-            if (speedController.OnDecreaseSpeed()) {
+        public bool DecreaseSpeed(ref float _speed, float _deltaTime) {
+            if (speedController.OnDecreaseSpeed(ref _speed)) {
                 return true;
             }
 
-            speed = attributes.MoveSpeed.Decrease(ref speedTimeVar, DeltaTime, decreaseWrapper);
+            PhysicsSurface3D.Settings _physicsSurface = PhysicsSurface;
+            float _decrease = _deltaTime * _physicsSurface.DecreaseSpeedCoef;
+
+            _speed = attributes.MoveSpeed.Decrease(ref speedTimeVar, _decrease, decreaseWrapper, _physicsSurface.MaxSpeedCoef);
             return false;
         }
 
@@ -1075,8 +548,8 @@ namespace EnhancedFramework.Physics3D {
         /// Resets this object speed.
         /// </summary>
         /// <returns><inheritdoc cref="Movable3D.Doc" path="/returns"/></returns>
-        public bool ResetSpeed() {
-            if (speedController.OnResetSpeed()) {
+        public bool ResetSpeed(bool _isComputeVelocityCallback = false) {
+            if (speedController.OnResetSpeed(_isComputeVelocityCallback)) {
                 return true;
             }
 
@@ -1093,18 +566,27 @@ namespace EnhancedFramework.Physics3D {
         // -------------------------------------------
 
         /// <summary>
-        /// Get this object speed ratio.
+        /// Get this object speed-related time ratio.
         /// </summary>
-        public float GetSpeedRatio() {
-            return attributes.MoveSpeed.GetTimeRatio(speedTimeVar);
+        public float GetSpeedTimeRatio() {
+            return attributes.MoveSpeed.GetTimeRatio(speedTimeVar, PhysicsSurface.MaxSpeedCoef);
+        }
+
+        /// <summary>
+        /// Get this object speed-related value ratio.
+        /// </summary>
+        public float GetSpeedValueRatio() {
+            return attributes.MoveSpeed.GetValueRatio(speedTimeVar);
         }
 
         /// <summary>
         /// Set this object speed ratio.
         /// </summary>
         public void SetSpeedRatio(float _ratio) {
-            speed = attributes.MoveSpeed.EvaluatePercent(_ratio);
-            speedTimeVar = _ratio * attributes.MoveSpeed.Duration;
+            float _coef = PhysicsSurface.MaxSpeedCoef;
+
+            speed = attributes.MoveSpeed.EvaluatePercent(_ratio, _coef);
+            speedTimeVar = _ratio * attributes.MoveSpeed.Duration * _coef;
         }
         #endregion
 
@@ -1113,16 +595,20 @@ namespace EnhancedFramework.Physics3D {
         #region Computation
         private const float PathRotationTurnAngle = 2.5f;
 
-        private const float PathStuckMagnitudeTolerance = .1f;
+        private const float PathStuckMagnitudeTolerance = .04f;
         private const float PathStuckMaxDuration = 1f;
 
-        private Vector3 pathLastDirection = Vector3.zero;
-        private float pathStuckDuration = 0f;
+        private Vector3 lastPathDirection = Vector3.zero;
+        private float pathStuckDuration   = 0f;
+
+        private bool isChangingDirection = false;
+        private Quaternion lastDirection = Quaternion.identity;
+        private Vector3 lastMovement     = Vector3.zero;
 
         // -----------------------
 
-        protected override bool OnPreComputeVelocity() {
-            if (base.OnPreComputeVelocity()) {
+        protected override bool OnPreComputeVelocity(float _deltaTime, out float _speed) {
+            if (base.OnPreComputeVelocity(_deltaTime, out _speed)) {
                 return true;
             }
 
@@ -1134,11 +620,10 @@ namespace EnhancedFramework.Physics3D {
                 if (FollowPath(_direction.normalized)) {
 
                     // When following the path, check if something is preventing the object from moving.
-                    float _difference = Mathf.Abs(pathLastDirection.sqrMagnitude - _direction.sqrMagnitude);
-
+                    float _difference = Mathf.Abs(lastPathDirection.sqrMagnitude - _direction.sqrMagnitude);
                     if (_difference < PathStuckMagnitudeTolerance) {
 
-                        pathStuckDuration += DeltaTime;
+                        pathStuckDuration += _deltaTime;
 
                         // If stuck for too long, cancel path.
                         if (pathStuckDuration > PathStuckMaxDuration) {
@@ -1151,22 +636,23 @@ namespace EnhancedFramework.Physics3D {
 
                 // ----- Local Method ----- \\
 
-                bool FollowPath(Vector3 _movement) {
+                bool FollowPath(Vector3 _direction) {
                     switch (attributes.PathRotationMode) {
 
-                        case PathRotationMode.TurnBeforeMovement:
+                        case PathRotationMode.TurnBeforeMovement: {
                             TurnTo(_direction);
 
                             // Don't move while not facing direction.
-                            if (!Mathm.IsInRange(GetForwardAngle(_direction), -PathRotationTurnAngle, PathRotationTurnAngle)) {                                
+                            if (!Mathm.IsInRange(GetForwardAngle(_direction), -PathRotationTurnAngle, PathRotationTurnAngle)) {
                                 return false;
                             }
+                        }
+                        break;
 
-                            break;
-
-                        case PathRotationMode.TurnDuringMovement:
+                        case PathRotationMode.TurnDuringMovement: {
                             TurnTo(_direction);
-                            break;
+                        }
+                        break;
 
                         case PathRotationMode.None:
                         default:
@@ -1180,25 +666,30 @@ namespace EnhancedFramework.Physics3D {
 
             // Position update.
             if (!_isStuck) {
-                pathLastDirection = _direction;
+                lastPathDirection = _direction;
                 pathStuckDuration = 0f;
             }
 
-            UpdateSpeed();
+            ComputeMovementVelocity(_deltaTime);
             return false;
         }
 
-        protected override bool OnPostComputeVelocity(ref FrameVelocity _velocity) {
-            if (base.OnPostComputeVelocity(ref _velocity)) {
+        protected override bool OnPostComputeVelocity(float _deltaTime, ref FrameVelocity _velocity) {
+            if (base.OnPostComputeVelocity(_deltaTime, ref _velocity)) {
                 return true;
             }
 
+            // Reset speed if no movement, to avoid starting back movement at full speed.
+            if (Velocity.Movement.IsNull()) {
+                ResetSpeed(true);
+            }
+
             // Clamp path velocity magnitude.
-            if (path.GetNextDirection( out Vector3 _direction)) {
+            if (path.GetNextDirection(out Vector3 _direction)) {
 
                 // Cache unclamped movement.
                 Vector3 _movement = _velocity.Movement;
-                lastPathMovement = _movement;
+                lastPathMovement  = _movement;
 
                 // Clamping the vector magnitude does not guarantee that the movement
                 // will not be oriented in the wrong direction,
@@ -1211,11 +702,75 @@ namespace EnhancedFramework.Physics3D {
 
             return false;
         }
+
+        // -------------------------------------------
+        // Utility
+        // -------------------------------------------
+
+        protected override float ComputeSpeed(ref float _speed, float _deltaTime) {
+            _speed = base.ComputeSpeed(ref _speed, _deltaTime);
+            UpdateSpeed(ref _speed, _deltaTime);
+
+            return _speed;
+        }
+
+        /// <summary>
+        /// Computes this object movement-related velocity.
+        /// </summary>
+        private void ComputeMovementVelocity(float _deltaTime) {
+
+            bool _deceleration = !attributes.InstantDeceleration;
+            bool _turnAround   = !attributes.InstantTurnAround;
+
+            // Early return.
+            if (!_deceleration && !_turnAround)
+                return;
+
+            Vector3 _lastMovement = lastMovement;
+            Vector3 _movement     = Velocity.Movement;
+
+            if (attributes.PreserveOrientation) {
+                _lastMovement = lastMovement.RotateInverse(lastDirection).Rotate(DirectionRotation);
+            }
+
+            // Turn around:
+            bool _isTurningAround = isChangingDirection;
+
+            if (_turnAround && !_movement.IsNull() && (_isTurningAround || (!_lastMovement.IsNull() && (Vector3.Dot(_lastMovement, _movement) < 0f)))) {
+
+                Vector3 _originMovement = _movement;
+
+                float _speed = attributes.TurnAroundSpeed * PhysicsSurface.ChangeDirectionCoef;
+                _movement    = Vector3.MoveTowards(_lastMovement, _movement, _speed * _deltaTime);
+
+                if (_movement == _originMovement) {
+                    _isTurningAround = false;
+                } else {
+                    _isTurningAround = true;
+                }
+            } else {
+                _isTurningAround = false;
+            }
+
+            isChangingDirection = _isTurningAround;
+
+            // Deceleration:
+            if (_deceleration && _movement.IsNull() && !_lastMovement.IsNull()) {
+
+                float _speed = attributes.DecelerationSpeed * PhysicsSurface.DecelerationCoef;
+                _movement    = Vector3.MoveTowards(_lastMovement, _movement, _speed * _deltaTime);
+            }
+
+            // Update data.
+            Velocity.Movement = _movement;
+            lastMovement      = _movement;
+            lastDirection     = DirectionRotation;
+        }
         #endregion
 
         #region Collision
-        protected override bool OnAppliedVelocity(FrameVelocity _velocity, CollisionData3D _data) {
-            if (base.OnAppliedVelocity(_velocity, _data)) {
+        protected override bool OnAppliedVelocity(CollisionOperationData3D _operation) {
+            if (base.OnAppliedVelocity(_operation)) {
                 return true;
             }
 
@@ -1226,7 +781,6 @@ namespace EnhancedFramework.Physics3D {
 
             // Forward rotation.
             UpdateRotation();
-
             return false;
         }
         #endregion

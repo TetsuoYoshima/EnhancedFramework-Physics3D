@@ -16,8 +16,8 @@ namespace EnhancedFramework.Physics3D.Timeline {
     /// <summary>
     /// Teleports a <see cref="Movable3D"/> to a specific position.
     /// </summary>
-    [DisplayName("Movable/Teleport")]
-    public class TeleportMovable3DClip : Movable3DPlayableAsset<TeleportMovable3DBehaviour> {
+    [DisplayName(NamePrefix + "Teleport")]
+    public sealed class TeleportMovable3DClip : Movable3DPlayableAsset<TeleportMovable3DBehaviour> {
         #region Global Members
         public ExposedReference<Transform> Position = new ExposedReference<Transform>();
         #endregion
@@ -73,8 +73,10 @@ namespace EnhancedFramework.Physics3D.Timeline {
 
                 // Preview origin.
                 if (fromPosition.IsNull()) {
-                    fromPosition = Movable.transform.position;
-                    fromRotation = Movable.transform.rotation;
+                    Transform _transform = Movable.transform;
+
+                    fromPosition = _transform.position;
+                    fromRotation = _transform.rotation;
                 }
             }
             #endif

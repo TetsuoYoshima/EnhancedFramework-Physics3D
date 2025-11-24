@@ -23,7 +23,7 @@ namespace EnhancedFramework.Physics3D {
         int InitColliderMask(Collider _collider);
 
         /// <inheritdoc cref="Movable3D.GetTriggerMask"/>
-        /// <returns><inheritdoc cref="InitColliderMask(Collider)" path="/returns"/></returns>
+        /// <returns><inheritdoc cref="InitColliderMask" path="/returns"/></returns>
         int InitTriggerMask(Collider _trigger);
     }
 
@@ -31,11 +31,11 @@ namespace EnhancedFramework.Physics3D {
     /// Controller for a <see cref="Movable3D"/> velocity.
     /// </summary>
     public interface IMovable3DVelocityController {
-        /// <inheritdoc cref="Movable3D.Move(Vector3)"/>
+        /// <inheritdoc cref="Movable3D.Move"/>
         bool Move(Vector3 _direction);
 
         /// <inheritdoc cref="Movable3D.ResetVelocity"/>
-        bool OnResetVelocity();
+        bool OnResetVelocity(bool _force = false);
 
         /// <inheritdoc cref="Movable3D.ApplyGravity"/>
         bool OnApplyGravity();
@@ -57,48 +57,48 @@ namespace EnhancedFramework.Physics3D {
     /// </summary>
     public interface IMovable3DComputationController {
         /// <inheritdoc cref="Movable3D.OnPreComputeVelocity"/>
-        bool OnPreComputeVelocity();
+        bool OnPreComputeVelocity(float _deltaTime, out float _speed);
 
         /// <param name="_velocity">Actual velocity of the object</param>
         /// <param name="_frameVelocity"><inheritdoc cref="Movable3D.ComputeVelocity" path="/returns"/></param>
         /// <inheritdoc cref="Movable3D.ComputeVelocity"/>
-        bool OnComputeVelocity(Velocity _velocity, ref FrameVelocity _frameVelocity);
+        bool OnComputeVelocity(Velocity _velocity, float _speed, float _deltaTime, ref FrameVelocity _frameVelocity);
 
         /// <inheritdoc cref="Movable3D.OnPostComputeVelocity"/>
-        bool OnPostComputeVelocity(ref FrameVelocity _frameVelocity);
+        bool OnPostComputeVelocity(float _deltaTime, ref FrameVelocity _frameVelocity);
     }
 
     /// <summary>
     /// Controller for a <see cref="Movable3D"/> collisions.
     /// </summary>
     public interface IMovable3DCollisionController {
-        /// <inheritdoc cref="Movable3D.SetGroundState(bool, RaycastHit)"/>
+        /// <inheritdoc cref="Movable3D.SetGroundState"/>
         bool OnSetGroundState(ref bool _isGrounded, RaycastHit _hit);
 
-        /// <inheritdoc cref="Movable3D.OnAppliedVelocity(FrameVelocity, CollisionData3D)"/>
-        bool OnAppliedVelocity(ref FrameVelocity _velocity, CollisionData3D _data);
+        /// <inheritdoc cref="Movable3D.OnAppliedVelocity"/>
+        bool OnAppliedVelocity(CollisionOperationData3D _operation);
 
-        /// <inheritdoc cref="Movable3D.OnRefreshedObject(FrameVelocity, CollisionData3D)"/>
-        bool OnRefreshedObject(ref FrameVelocity _velocity, CollisionData3D _data);
+        /// <inheritdoc cref="Movable3D.OnRefreshedObject"/>
+        bool OnRefreshedObject(CollisionOperationData3D _operation);
 
-        /// <inheritdoc cref="Movable3D.OnGrounded(bool)"/>
+        /// <inheritdoc cref="Movable3D.OnGrounded"/>
         bool OnGrounded(bool _isGrounded);
 
-        /// <inheritdoc cref="Movable3D.OnExtractFromCollider(Collider, Vector3, float)"/>
-        bool OnExtractFromCollider(Collider _collider, Vector3 _direction, float _distance);
+        /// <inheritdoc cref="Movable3D.OnExtractFromCollider"/>
+        bool OnExtractFromCollider(Collider _colliderA, Collider _colliderB, Vector3 _direction, float _distance);
 
-        /// <inheritdoc cref="Movable3D.OnHitByMovable(Movable3D, Collider, Collider)"/>
-        bool OnHitByMovable(Movable3D _other, Collider _otherCollider, Collider _thisCollider);
+        /// <inheritdoc cref="Movable3D.OnHitByMovable"/>
+        bool OnHitByMovable(Movable3D _other, CollisionHit3D _collision);
     }
 
     /// <summary>
     /// Controller for a <see cref="Movable3D"/> trigger.
     /// </summary>
     public interface IMovable3DTriggerController {
-        /// <inheritdoc cref="Movable3D.OnEnterTrigger(ITrigger)"/>
+        /// <inheritdoc cref="Movable3D.OnEnterTrigger"/>
         void OnEnterTrigger(ITrigger _trigger);
 
-        /// <inheritdoc cref="Movable3D.OnExitTrigger(ITrigger)"/>
+        /// <inheritdoc cref="Movable3D.OnExitTrigger"/>
         void OnExitTrigger(ITrigger _trigger);
     }
 
@@ -111,42 +111,42 @@ namespace EnhancedFramework.Physics3D {
     /// </summary>
     public interface ICreatureMovable3DSpeedController {
         /// <inheritdoc cref="CreatureMovable3D.UpdateSpeed"/>
-        bool OnUpdateSpeed();
+        bool OnUpdateSpeed(ref float _speed);
 
         /// <inheritdoc cref="CreatureMovable3D.IncreaseSpeed"/>
-        bool OnIncreaseSpeed();
+        bool OnIncreaseSpeed(ref float _speed);
 
-        /// <inheritdoc cref="CreatureMovable3D.DecreaseSpeed()"/>
-        bool OnDecreaseSpeed();
+        /// <inheritdoc cref="CreatureMovable3D.DecreaseSpeed"/>
+        bool OnDecreaseSpeed(ref float _speed);
 
         /// <inheritdoc cref="CreatureMovable3D.ResetSpeed"/>
-        bool OnResetSpeed();
+        bool OnResetSpeed(bool _isComputeVelocityCallback);
     }
 
     /// <summary>
     /// Controller for an <see cref="CreatureMovable3D"/> rotation.
     /// </summary>
     public interface ICreatureMovable3DRotationController {
-        /// <inheritdoc cref="CreatureMovable3D.Turn(float, bool)"/>
+        /// <inheritdoc cref="CreatureMovable3D.Turn"/>
         bool OnTurn(ref float _angleIncrement);
 
         /// <inheritdoc cref="CreatureMovable3D.TurnTo(Vector3, Action)"/>
         bool OnTurnTo(Vector3 _forward, Action _onComplete);
 
-        /// <inheritdoc cref="CreatureMovable3D.StopTurnTo(bool)"/>
+        /// <inheritdoc cref="CreatureMovable3D.StopTurnTo"/>
         void OnCompleteTurnTo(bool _reset);
     }
 
     /// Controller for an <see cref="CreatureMovable3D"/> navigation path callbacks.
     /// </summary>
     public interface ICreatureMovable3DNavigationController {
-        /// <inheritdoc cref="CreatureMovable3D.DoCompleteNavigation(out bool)"/>
+        /// <inheritdoc cref="CreatureMovable3D.DoCompleteNavigation"/>
         bool CompletePath(out bool _completed);
 
-        /// <inheritdoc cref="CreatureMovable3D.SetNavigationPath(PathHandler)"/>
+        /// <inheritdoc cref="CreatureMovable3D.SetNavigationPath"/>
         void OnNavigateTo(PathHandler _path);
 
-        /// <inheritdoc cref="CreatureMovable3D.OnCompleteNavigation(bool)"/>
+        /// <inheritdoc cref="CreatureMovable3D.OnCompleteNavigation"/>
         void OnCompleteNavigation(bool _success);
     }
     #endregion
@@ -161,7 +161,7 @@ namespace EnhancedFramework.Physics3D {
         /// <summary>
         /// Static instance of this class.
         /// </summary>
-        public static DefaultMovable3DController Instance = new DefaultMovable3DController();
+        public static readonly DefaultMovable3DController Instance = new DefaultMovable3DController();
         #endregion
 
         // ----- Movable ----- \\
@@ -175,7 +175,7 @@ namespace EnhancedFramework.Physics3D {
             return false;
         }
 
-        public bool OnResetVelocity() {
+        public bool OnResetVelocity(bool _force = false) {
             return false;
         }
         #endregion
@@ -187,25 +187,26 @@ namespace EnhancedFramework.Physics3D {
         #endregion
 
         #region Computation
-        public bool OnPreComputeVelocity() {
+        public bool OnPreComputeVelocity(float _deltaTime, out float _speed) {
+            _speed = 0f;
             return false;
         }
 
-        public bool OnComputeVelocity(Velocity _velocity, ref FrameVelocity _frameVelocity) {
+        public bool OnComputeVelocity(Velocity _velocity, float _speed, float _deltaTime, ref FrameVelocity _frameVelocity) {
             return false;
         }
 
-        public bool OnPostComputeVelocity(ref FrameVelocity _frameVelocity) {
+        public bool OnPostComputeVelocity(float _deltaTime, ref FrameVelocity _frameVelocity) {
             return false;
         }
         #endregion
 
         #region Collision
-        public bool OnAppliedVelocity(ref FrameVelocity _velocity, CollisionData3D _data) {
+        public bool OnAppliedVelocity(CollisionOperationData3D _operation) {
             return false;
         }
 
-        public bool OnRefreshedObject(ref FrameVelocity _velocity, CollisionData3D _data) {
+        public bool OnRefreshedObject(CollisionOperationData3D _operation) {
             return false;
         }
 
@@ -217,11 +218,11 @@ namespace EnhancedFramework.Physics3D {
             return false;
         }
 
-        public bool OnExtractFromCollider(Collider _collider, Vector3 _direction, float _distance) {
+        public bool OnExtractFromCollider(Collider _colliderA, Collider _colliderB, Vector3 _direction, float _distance) {
             return false;
         }
 
-        public bool OnHitByMovable(Movable3D _other, Collider _otherCollider, Collider _thisCollider) {
+        public bool OnHitByMovable(Movable3D _other, CollisionHit3D _collision) {
             return false;
         }
         #endregion
@@ -245,19 +246,19 @@ namespace EnhancedFramework.Physics3D {
         // ----- Creature ----- \\
 
         #region Speed
-        public bool OnUpdateSpeed() {
+        public bool OnUpdateSpeed(ref float _speed) {
             return false;
         }
 
-        public bool OnIncreaseSpeed() {
+        public bool OnIncreaseSpeed(ref float _speed) {
             return false;
         }
 
-        public bool OnDecreaseSpeed() {
+        public bool OnDecreaseSpeed(ref float _speed) {
             return false;
         }
 
-        public bool OnResetSpeed() {
+        public bool OnResetSpeed(bool _isComputeVelocityCallback) {
             return false;
         }
         #endregion

@@ -51,7 +51,7 @@ namespace EnhancedFramework.Physics3D {
         /// World-space non-rotated extents of the collider.
         /// </summary>
         public Vector3 Extents {
-            get { return wrapper.GetExtents(); }
+            get { return wrapper.GetExtents(true); }
         }
 
         /// <summary>
@@ -86,8 +86,8 @@ namespace EnhancedFramework.Physics3D {
         #region Initialization
         /// <inheritdoc cref="Initialize(int)"/>
         public void Initialize() {
-            int _layer = Physics3DUtility.GetLayerCollisionMask(collider.gameObject);
-            Initialize(_layer);
+            int _collisionMask = Physics3DUtility.GetLayerCollisionMask(collider.gameObject);
+            Initialize(_collisionMask);
         }
 
         /// <summary>
@@ -101,9 +101,18 @@ namespace EnhancedFramework.Physics3D {
         }
         #endregion
 
+        // --- Physics Operation --- \\
+
         #region Overlap
         private const QueryTriggerInteraction OverlapDefaultQueryTrigger = QueryTriggerInteraction.Collide;
         private static Collider[] overlapBuffer = new Collider[16];
+
+        /// <summary>
+        /// Current size of the buffer used for overlap operations.
+        /// </summary>
+        public static int OverlapBufferSize {
+            get { return overlapBuffer.Length; }
+        }
 
         // -------------------------------------------
         // Overlap
@@ -116,17 +125,17 @@ namespace EnhancedFramework.Physics3D {
 
         /// <inheritdoc cref="Overlap(IList{Collider}, int, QueryTriggerInteraction)"/>
         public int Overlap(int _mask, QueryTriggerInteraction _triggerInteraction = OverlapDefaultQueryTrigger) {
-            int amount = wrapper.Overlap(overlapBuffer, _mask, _triggerInteraction);
-            int size   = overlapBuffer.Length;
+            int _amount = wrapper.Overlap(overlapBuffer, _mask, _triggerInteraction);
+            int _size   = overlapBuffer.Length;
 
-            if (amount == size) {
-                int newSize = overlapBuffer.Length * 2;
-                Debug.LogWarning($"Maximum Overlap detection limit reached! Increasing buffer size from {size} to {newSize}");
+            if (_amount == _size) {
+                int _newSize = overlapBuffer.Length * 2;
+                Debug.LogWarning($"Maximum Overlap detection limit reached! Increasing buffer size from {_size} to {_newSize}");
 
-                Array.Resize(ref overlapBuffer, newSize);
+                Array.Resize(ref overlapBuffer, _newSize);
             }
 
-            return amount;
+            return _amount;
         }
 
         /// <inheritdoc cref="Overlap(IList{Collider}, int, QueryTriggerInteraction)"/>
@@ -144,17 +153,9 @@ namespace EnhancedFramework.Physics3D {
         /// <param name="_triggerInteraction">Determines if triggers should be detected.</param>
         /// <returns>Total amount of overlapping colliders.</returns>
         public int Overlap(IList<Collider> _ignoredColliders, int _mask, QueryTriggerInteraction _triggerInteraction = OverlapDefaultQueryTrigger) {
+
             int _amount = Overlap(_mask, _triggerInteraction);
-
-            if ((_ignoredColliders != null) && (_ignoredColliders.Count != 0)) {
-                for (int i = 0; i < _amount; i++) {
-
-                    if (_ignoredColliders.Contains(overlapBuffer[i])) {
-                        overlapBuffer[i] = overlapBuffer[--_amount];
-                        i--;
-                    }
-                }
-            }
+            _amount = Physics3DUtility.FilterColliders(overlapBuffer, _ignoredColliders, 0, _amount);
 
             return _amount;
         }
@@ -178,7 +179,7 @@ namespace EnhancedFramework.Physics3D {
         /// <summary>
         /// Sorts overlapping colliders by distance, using a specific <see cref="Vector3"/> reference position.
         /// </summary>
-        /// <inheritdoc cref="Physics3DUtility.SortCollidersByDistance(Collider[], int, Vector3)"/>
+        /// <inheritdoc cref="Physics3DUtility.SortCollidersByDistance"/>
         public static void SortOverlapCollidersByDistance(int _count, Vector3 _reference) {
             Physics3DUtility.SortCollidersByDistance(overlapBuffer, _count, _reference);
         }
@@ -205,80 +206,101 @@ namespace EnhancedFramework.Physics3D {
             return Raycast(_direction, out _hit, _distance, CollisionMask, _triggerInteraction);
         }
 
-        /// <summary>
-        /// Performs a raycasts from this collider in a given direction.
-        /// </summary>
-        /// <param name="_direction">Raycast direction.</param>
-        /// <param name="_hit">Detailed informations on raycast hit.</param>
-        /// <param name="_distance">Maximum raycast distance.</param>
-        /// <param name="_mask"><see cref="LayerMask"/> used for collisions detection.</param>
-        /// <param name="_triggerInteraction">Determines if triggers should be detected.</param>
         /// <returns>True if the raycast hit something, false otherwise.</returns>
+        /// <inheritdoc cref="RaycastAll"/>
         public bool Raycast(Vector3 _direction, out RaycastHit _hit, float _distance, int _mask, QueryTriggerInteraction _triggerInteraction = RaycastDefaultQueryTrigger) {
             return wrapper.Raycast(_direction, out _hit, _distance, _mask, _triggerInteraction);
+        }
+
+        // -------------------------------------------
+        // Raycast All
+        // -------------------------------------------
+
+        /// <summary>
+        /// Performs a raycast from this collider in a given direction.
+        /// </summary>
+        /// <param name="_direction">Raycast direction.</param>
+        /// <inheritdoc cref="CastAll(Vector3, out RaycastHit, float, int, QueryTriggerInteraction, bool, IList{Collider})"/>
+        /// <returns>True if the raycast hit something, false otherwise.</returns>
+        public int RaycastAll(Vector3 _direction, out RaycastHit _hit, float _distance, int _mask, QueryTriggerInteraction _triggerInteraction = QueryTriggerInteraction.Ignore, bool _ignoreFurtherHits = true,
+                              IList<Collider> _ignoredColliders = null) {
+
+            // Distance security.
+            float _contactOffset = ContactOffset;
+            _distance += _contactOffset * 2f;
+
+            // Cast.
+            int _amount = wrapper.RaycastAll(_direction, castBuffer, _distance, _mask, _triggerInteraction);
+            if (_amount != 0) {
+
+                // Filter results.
+                _amount = Physics3DUtility.FilterCastHits(collider, castBuffer, 0, _amount, out _hit, _ignoreFurtherHits, _ignoredColliders);
+                if (_amount != 0) {
+                    return _amount;
+                }
+            }
+
+            // No hit, so get full distance.
+            _hit = new RaycastHit { distance = _distance - _contactOffset };
+            return 0;
         }
         #endregion
 
         #region Cast
-        /// <summary>
-        /// Maximum distance when compared to the first hit of a cast, to be considered as valid.
-        /// </summary>
-        public const float MaxCastDifferenceDetection = .001f;
         private const QueryTriggerInteraction CastDefaultQueryTrigger = QueryTriggerInteraction.Ignore;
-
         internal static readonly RaycastHit[] castBuffer = new RaycastHit[8];
 
         // -------------------------------------------
         // Cast
         // -------------------------------------------
 
-        /// <param name="_velocity"><inheritdoc cref="CastAll(Vector3, out RaycastHit, QueryTriggerInteraction, IList{Collider})" path="/param[@name='_velocity']"/></param>
+        /// <param name="_velocity"><inheritdoc cref="CastAll(Vector3, out RaycastHit, QueryTriggerInteraction, bool, IList{Collider})" path="/param[@name='_direction']"/></param>
         /// <inheritdoc cref="Cast(Vector3, out RaycastHit, float, int, QueryTriggerInteraction, bool, IList{Collider})"/>
-        public bool Cast(Vector3 _velocity, out float _distance, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool ignoreFurtherHits = true,
+        public bool Cast(Vector3 _velocity, out float _distance, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool _ignoreFurtherHits = true,
                          IList<Collider> _ignoredColliders = null) {
-            bool _doHit = Cast(_velocity, out RaycastHit _hit, CollisionMask, _triggerInteraction, ignoreFurtherHits, _ignoredColliders);
+            bool _isHit = Cast(_velocity, out RaycastHit _hit, CollisionMask, _triggerInteraction, _ignoreFurtherHits, _ignoredColliders);
 
             _distance = _hit.distance;
-            return _doHit;
+            return _isHit;
         }
 
-        /// <param name="_velocity"><inheritdoc cref="CastAll(Vector3, out RaycastHit, QueryTriggerInteraction, IList{Collider})" path="/param[@name='_velocity']"/></param>
+        /// <param name="_velocity"><inheritdoc cref="CastAll(Vector3, out RaycastHit, QueryTriggerInteraction, bool, IList{Collider})" path="/param[@name='_direction']"/></param>
         /// <inheritdoc cref="Cast(Vector3, out RaycastHit, float, int, QueryTriggerInteraction, bool, IList{Collider})"/>
-        public bool Cast(Vector3 _velocity, out RaycastHit _hit, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool ignoreFurtherHits = true,
+        public bool Cast(Vector3 _velocity, out RaycastHit _hit, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool _ignoreFurtherHits = true,
                          IList<Collider> _ignoredColliders = null) {
-            return Cast(_velocity, out _hit, CollisionMask, _triggerInteraction, ignoreFurtherHits, _ignoredColliders);
+            return Cast(_velocity, out _hit, CollisionMask, _triggerInteraction, _ignoreFurtherHits, _ignoredColliders);
         }
 
-        /// <param name="_velocity"><inheritdoc cref="CastAll(Vector3, out RaycastHit, QueryTriggerInteraction, IList{Collider})" path="/param[@name='_velocity']"/></param>
+        /// <param name="_velocity"><inheritdoc cref="CastAll(Vector3, out RaycastHit, QueryTriggerInteraction, bool, IList{Collider})" path="/param[@name='_direction']"/></param>
         /// <inheritdoc cref="Cast(Vector3, out RaycastHit, float, int, QueryTriggerInteraction, bool, IList{Collider})"/>
-        public bool Cast(Vector3 _velocity, out RaycastHit _hit, int _mask, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool ignoreFurtherHits = true,
+        public bool Cast(Vector3 _velocity, out RaycastHit _hit, int _mask, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool _ignoreFurtherHits = true,
                          IList<Collider> _ignoredColliders = null) {
             float _distance = _velocity.magnitude;
-            return Cast(_velocity, out _hit, _distance, _mask, _triggerInteraction, ignoreFurtherHits, _ignoredColliders);
+            return Cast(_velocity, out _hit, _distance, _mask, _triggerInteraction, _ignoreFurtherHits, _ignoredColliders);
         }
 
         /// <inheritdoc cref="Cast(Vector3, out RaycastHit, float, int, QueryTriggerInteraction, bool, IList{Collider})"/>
-        public bool Cast(Vector3 _direction, out RaycastHit _hit, float _distance, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool ignoreFurtherHits = true,
+        public bool Cast(Vector3 _direction, out RaycastHit _hit, float _distance, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool _ignoreFurtherHits = true,
                          IList<Collider> _ignoredColliders = null) {
-            return Cast(_direction, out _hit, _distance, CollisionMask, _triggerInteraction, ignoreFurtherHits, _ignoredColliders);
+            return Cast(_direction, out _hit, _distance, CollisionMask, _triggerInteraction, _ignoreFurtherHits, _ignoredColliders);
         }
 
         /// <returns>True if this collider hit something, false otherwise.</returns>
         /// <inheritdoc cref="CastAll(Vector3, out RaycastHit, float, int, QueryTriggerInteraction, bool, IList{Collider})"/>
-        public bool Cast(Vector3 _direction, out RaycastHit _hit, float _distance, int _mask, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool ignoreFurtherHits = true,
+        public bool Cast(Vector3 _direction, out RaycastHit _hit, float _distance, int _mask, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool _ignoreFurtherHits = true,
                          IList<Collider> _ignoredColliders = null) {
-            return CastAll(_direction, out _hit, _distance, _mask, _triggerInteraction, ignoreFurtherHits, _ignoredColliders) != 0;
+            return CastAll(_direction, out _hit, _distance, _mask, _triggerInteraction, _ignoreFurtherHits, _ignoredColliders) != 0;
         }
 
         // -------------------------------------------
         // Cast All
         // -------------------------------------------
 
-        /// <param name="_velocity"><inheritdoc cref="CastAll(Vector3, out RaycastHit, QueryTriggerInteraction, IList{Collider})" path="/param[@name='_velocity']"/></param>
+        /// <param name="_velocity"><inheritdoc cref="CastAll(Vector3, out RaycastHit, QueryTriggerInteraction, bool, IList{Collider})" path="/param[@name='_direction']"/></param>
         /// <inheritdoc cref="CastAll(Vector3, out RaycastHit, float, int, QueryTriggerInteraction, bool, IList{Collider})"/>
-        public int CastAll(Vector3 _velocity, out float _distance, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool ignoreFurtherHits = true,
+        public int CastAll(Vector3 _velocity, out float _distance, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool _ignoreFurtherHits = true,
                            IList<Collider> _ignoredColliders = null) {
-            int _amount = CastAll(_velocity, out RaycastHit _hit, _triggerInteraction, ignoreFurtherHits, _ignoredColliders);
+            int _amount = CastAll(_velocity, out RaycastHit _hit, _triggerInteraction, _ignoreFurtherHits, _ignoredColliders);
 
             _distance = _hit.distance;
             return _amount;
@@ -286,16 +308,16 @@ namespace EnhancedFramework.Physics3D {
 
         /// <param name="_velocity">Velocity used to perform this cast.</param>
         /// <inheritdoc cref="CastAll(Vector3, out RaycastHit, float, int, QueryTriggerInteraction, bool, IList{Collider})"/>
-        public int CastAll(Vector3 _velocity, out RaycastHit _hit, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool ignoreFurtherHits = true,
+        public int CastAll(Vector3 _velocity, out RaycastHit _hit, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool _ignoreFurtherHits = true,
                            IList<Collider> _ignoredColliders = null) {
             float _distance = _velocity.magnitude;
-            return CastAll(_velocity, out _hit, _distance, CollisionMask, _triggerInteraction, ignoreFurtherHits, _ignoredColliders);
+            return CastAll(_velocity, out _hit, _distance, CollisionMask, _triggerInteraction, _ignoreFurtherHits, _ignoredColliders);
         }
 
         /// <inheritdoc cref="CastAll(Vector3, out RaycastHit, float, int, QueryTriggerInteraction, bool, IList{Collider})"/>
-        public int CastAll(Vector3 _direction, out RaycastHit _hit, float _distance, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool ignoreFurtherHits = true,
+        public int CastAll(Vector3 _direction, out RaycastHit _hit, float _distance, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool _ignoreFurtherHits = true,
                            IList<Collider> _ignoredColliders = null) {
-            return CastAll(_direction, out _hit, _distance,  CollisionMask, _triggerInteraction, ignoreFurtherHits, _ignoredColliders);
+            return CastAll(_direction, out _hit, _distance,  CollisionMask, _triggerInteraction, _ignoreFurtherHits, _ignoredColliders);
         }
 
         /// <summary>
@@ -306,73 +328,30 @@ namespace EnhancedFramework.Physics3D {
         /// <param name="_distance">Maximum cast distance.</param>
         /// <param name="_mask"><see cref="LayerMask"/> used for collisions detection.</param>
         /// <param name="_triggerInteraction">Determines if triggers should be detected.</param>
-        /// <param name="ignoreFurtherHits">If true, ignore all hits with a greater distance than to the closest one.</param>
+        /// <param name="_ignoreFurtherHits">If true, ignore all hits with a greater distance than to the closest one.</param>
         /// <param name="_ignoredColliders">Colliders to ignore.</param>
         /// <returns>Total amount of consistent hits on the trajectory.</returns>
-        public int CastAll(Vector3 _direction, out RaycastHit _hit, float _distance, int _mask, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool ignoreFurtherHits = true,
+        public int CastAll(Vector3 _direction, out RaycastHit _hit, float _distance, int _mask, QueryTriggerInteraction _triggerInteraction = CastDefaultQueryTrigger, bool _ignoreFurtherHits = true,
                            IList<Collider> _ignoredColliders = null) {
+
             // Distance security.
             float _contactOffset = ContactOffset;
             _distance += _contactOffset * 2f;
 
+            // Cast.
             int _amount = wrapper.Cast(_direction, castBuffer, _distance, _mask, _triggerInteraction);
+            if (_amount != 0) {
 
-            if (_amount > 0) {
-                if ((_ignoredColliders == null) || (_ignoredColliders.Count == 0)) {
-                    // Remove this object collider if detected.
-                    if (castBuffer[_amount - 1].collider == collider) {
-                        _amount--;
-                        if (_amount == 0) {
-                            _hit = GetDefaultHit();
-                            return 0;
-                        }
-                    }
-
-                    #if DEVELOPMENT
-                    // Debug utility. Should be remove at some point.
-                    for (int i = 0; i < _amount; i++) {
-                        if (castBuffer[i].collider == collider) {
-                            collider.LogError($"This object collider found => {i}/{_amount}");
-                        }
-                    }
-                    #endif
-                } else {
-                    // Ignored colliders.
-                    for (int i = 0; i < _amount; i++) {
-                        if (_ignoredColliders.Contains(castBuffer[i].collider)) {
-                            castBuffer[i] = castBuffer[--_amount];
-                            i--;
-                        }
-                    }
+                // Filter results.
+                _amount = Physics3DUtility.FilterCastHits(collider, castBuffer, 0, _amount, out _hit, _ignoreFurtherHits, _ignoredColliders);
+                if (_amount != 0) {
+                    return _amount;
                 }
-
-                Physics3DUtility.SortRaycastHitByDistance(castBuffer, _amount);
-
-                _hit = castBuffer[0];
-                _hit.distance = Mathf.Max(0f, _hit.distance - _contactOffset);
-
-                // Ignore hits that are too distants from the closest one.
-                if (ignoreFurtherHits) {
-
-                    for (int i = 1; i < _amount; i++) {
-                        if (castBuffer[i].distance > (_hit.distance + MaxCastDifferenceDetection))
-                            return i;
-                    }
-                }
-            } else {
-                // No hit, so get full distance.
-                _hit = GetDefaultHit();
             }
 
-            return _amount;
-
-            // ----- Local Method ----- \\
-
-            RaycastHit GetDefaultHit() {
-                return new RaycastHit {
-                    distance = _distance - _contactOffset
-                };
-            }
+            // No hit, so get full distance.
+            _hit = new RaycastHit { distance = _distance - _contactOffset };
+            return 0;
         }
 
         // -------------------------------------------
@@ -392,11 +371,13 @@ namespace EnhancedFramework.Physics3D {
         /// <summary>
         /// Sorts detected hits by distance.
         /// </summary>
-        /// <inheritdoc cref="Physics3DUtility.SortRaycastHitByDistance(RaycastHit[], int)"/>
+        /// <inheritdoc cref="Physics3DUtility.SortRaycastHitByDistance(RaycastHit[], int, int)"/>
         public static void SortCastHitByDistance(int _count) {
             Physics3DUtility.SortRaycastHitByDistance(castBuffer, _count);
         }
         #endregion
+
+        // --- Utility --- \\
 
         #region Utility
         private static readonly PhysicsCollider3D sharedInstance = new PhysicsCollider3D();
@@ -404,9 +385,9 @@ namespace EnhancedFramework.Physics3D {
         // -----------------------
 
         /// <inheritdoc cref="GetTemp(Collider, int)"/>
-        public static PhysicsCollider3D GetTemp(Collider collider) {
-            int layer = Physics3DUtility.GetLayerCollisionMask(collider.gameObject);
-            return GetTemp(collider, layer);
+        public static PhysicsCollider3D GetTemp(Collider _collider) {
+            int _collisionMask = Physics3DUtility.GetLayerCollisionMask(_collider.gameObject);
+            return GetTemp(_collider, _collisionMask);
         }
 
         /// <summary>
@@ -424,13 +405,24 @@ namespace EnhancedFramework.Physics3D {
             wrapper.SetBounds(_center, _size);
         }
 
-
         /// <inheritdoc cref="ColliderWrapper3D.GetBounds"/>
         public Bounds GetBounds() {
             return wrapper.GetBounds();
         }
 
-        // -----------------------
+        /// <inheritdoc cref="ColliderWrapper3D.GetBottomPosition"/>
+        public Vector3 GetBottomPosition() {
+            return wrapper.GetBottomPosition();
+        }
+
+        /// <inheritdoc cref="ColliderWrapper3D.UpdateTransformPosition"/>
+        public void UpdateTransformPosition() {
+            wrapper.UpdateTransformPosition();
+        }
+
+        // -------------------------------------------
+        // Internal
+        // -------------------------------------------
 
         private PhysicsCollider3D Setup(Collider _collider, int _collisionMask) {
             collider      = _collider;

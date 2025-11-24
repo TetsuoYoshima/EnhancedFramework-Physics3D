@@ -35,9 +35,9 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
         public override void Reset() {
             base.Reset();
 
-            Velocity        = null;
             InstantVelocity = false;
             EveryFrame      = false;
+            Velocity        = null;
         }
 
         public override void OnEnter() {
@@ -56,7 +56,9 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             AddVelocity();
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         private void AddVelocity() {
             if (GetMovable(out Movable3D _movable)) {
@@ -76,7 +78,7 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// <see cref="FsmStateAction"/> used to add a velocity to a <see cref="Movable3D"/>.
     /// </summary>
     [Tooltip("Adds a velocity to a Movable3D.")]
-    [ActionCategory("Movable 3D")]
+    [ActionCategory(CategoryName)]
     public sealed class Movable3DAddVelocity : BaseMovable3DAddVelocity {
         #region Global Members
         // -------------------------------------------
@@ -95,12 +97,13 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Movable = null;
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         public override bool GetMovable(out Movable3D _movable) {
 
             if (Movable.Value is Movable3D _temp) {
-
                 _movable = _temp;
                 return true;
             }

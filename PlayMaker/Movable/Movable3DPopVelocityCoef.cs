@@ -13,24 +13,22 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// <summary>
     /// Base <see cref="FsmStateAction"/> used to pop a velocity coefficient from a <see cref="Movable3D"/>.
     /// </summary>
-    [Tooltip("Pops and remove a velocity coefficient from a Movable3D.")]
-    [ActionCategory("Movable 3D")]
     public abstract class BaseMovable3DPopVelocityCoef : BaseMovable3DFSM {
         #region Global Members
         // -------------------------------------------
         // Coefficient
         // -------------------------------------------
 
-        [Tooltip("Velocity coefficient to pop.")]
+        [Tooltip("Id of the coefficient to pop - same as used to push it (safe to use with 0 as value).")]
         [RequiredField]
-        public FsmFloat Coefficient;
+        public FsmInt Id;
         #endregion
 
         #region Behaviour
         public override void Reset() {
             base.Reset();
 
-            Coefficient = null;
+            Id = null;
         }
 
         public override void OnEnter() {
@@ -40,11 +38,14 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Finish();
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         private void Pop() {
+
             if (GetMovable(out Movable3D _movable)) {
-                _movable.PopVelocityCoef(Coefficient.Value);
+                _movable.PopVelocityCoef(BaseMovable3DPushVelocityCoef.GetVelocityId(Id.Value));
             }
         }
         #endregion
@@ -54,7 +55,7 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// <see cref="FsmStateAction"/> used to pop a velocity coefficient from a <see cref="Movable3D"/>.
     /// </summary>
     [Tooltip("Pops and remove a velocity coefficient from a Movable3D.")]
-    [ActionCategory("Movable 3D")]
+    [ActionCategory(CategoryName)]
     public sealed class Movable3DPopVelocityCoef : BaseMovable3DPopVelocityCoef {
         #region Global Members
         // -------------------------------------------
@@ -73,12 +74,13 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Movable = null;
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         public override bool GetMovable(out Movable3D _movable) {
 
             if (Movable.Value is Movable3D _temp) {
-
                 _movable = _temp;
                 return true;
             }

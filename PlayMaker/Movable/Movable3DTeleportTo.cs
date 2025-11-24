@@ -39,7 +39,9 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Finish();
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         private void Move() {
             GameObject _gameObject = Fsm.GetOwnerDefaultTarget(Position);
@@ -55,7 +57,7 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// <see cref="FsmStateAction"/> used to teleport a <see cref="Movable3D"/> to a specific position.
     /// </summary>
     [Tooltip("Teleports a Movable3D to a specific position in space.")]
-    [ActionCategory("Movable 3D")]
+    [ActionCategory(CategoryName)]
     public sealed class Movable3DTeleportTo : BaseMovable3DTeleportTo {
         #region Global Members
         // -------------------------------------------
@@ -74,12 +76,13 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Movable = null;
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         public override bool GetMovable(out Movable3D _movable) {
 
             if (Movable.Value is Movable3D _temp) {
-
                 _movable = _temp;
                 return true;
             }

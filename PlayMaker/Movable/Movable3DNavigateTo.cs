@@ -6,6 +6,7 @@
 
 using EnhancedEditor;
 using HutongGames.PlayMaker;
+using System;
 using UnityEngine;
 
 using Tooltip = HutongGames.PlayMaker.TooltipAttribute;
@@ -36,13 +37,17 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
         #endregion
 
         #region Behaviour
+        private Action<bool, CreatureMovable3D> onCompleteCallback = null;
+
+        // -----------------------
+
         public override void Reset() {
             base.Reset();
 
-            Position     = null;
             UseRotation  = true;
             SuccessEvent = null;
             FailEvent    = null;
+            Position     = null;
         }
 
         public override void OnEnter() {
@@ -52,13 +57,18 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Finish();
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         private void NavigateTo() {
             GameObject _gameObject = Fsm.GetOwnerDefaultTarget(Position);
 
             if (_gameObject.IsValid() && GetMovable(out CreatureMovable3D _movable)) {
-                _movable.NavigateTo(_gameObject.transform, UseRotation.Value, OnComplete);
+
+                onCompleteCallback ??= OnComplete;
+                _movable.NavigateTo(_gameObject.transform, UseRotation.Value, onCompleteCallback);
+
             } else {
                 OnComplete(false, null);
             }
@@ -76,7 +86,7 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// <see cref="FsmStateAction"/> used to make a <see cref="CreatureMovable3D"/> navigate to a position.
     /// </summary>
     [Tooltip("Makes a Movable3D navigate to a position.")]
-    [ActionCategory("Movable 3D")]
+    [ActionCategory(CategoryName)]
     public sealed class Movable3DNavigateTo : BaseMovable3DNavigateTo {
         #region Global Members
         // -------------------------------------------
@@ -95,12 +105,13 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Movable = null;
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         public override bool GetMovable(out CreatureMovable3D _movable) {
 
             if (Movable.Value is CreatureMovable3D _temp) {
-
                 _movable = _temp;
                 return true;
             }

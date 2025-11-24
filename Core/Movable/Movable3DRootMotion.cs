@@ -15,7 +15,7 @@ namespace EnhancedFramework.Physics3D {
     /// </summary>
     [ScriptGizmos(false, true)]
     [RequireComponent(typeof(EnhancedAnimatorHandler))]
-    [AddComponentMenu(FrameworkUtility.MenuPath + "Physics 3D/Movable 3D Root Motion"), DisallowMultipleComponent]
+    [AddComponentMenu(FrameworkUtility.MenuPath + "Physics [3D]/Movable Root Motion [3D]"), DisallowMultipleComponent]
     public sealed class Movable3DRootMotion : EnhancedBehaviour {
         #region Global Members
         [Section("Root Motion")]
@@ -108,26 +108,27 @@ namespace EnhancedFramework.Physics3D {
         /// <param name="_current">Current motion state.</param>
         /// <param name="_next">Next motion state.</param>
         private void PerformRootMotion(Animator _animator, EnhancedAnimatorState _current, EnhancedAnimatorState _next) {
+            Movable3D _movable = movable;
 
-            Vector3 _positionMotion    = _animator.deltaPosition.RotateInverse(movable.Transform.rotation);
+            Vector3    _positionMotion = _movable.GetRelativeVector(_animator.deltaPosition);
             Quaternion _rotationMotion = _animator.deltaRotation;
 
             _current.ApplyMotion(_next, ref _positionMotion, ref _rotationMotion);
-            _positionMotion = _positionMotion.Rotate(movable.Transform.rotation);
+            _positionMotion = _positionMotion.Rotate(_movable.Transform.rotation);
 
             #if UNITY_EDITOR
             // Editor motion.
             if (!Application.isPlaying) {
 
-                movable.transform.position += _positionMotion;
-                movable.transform.rotation *= _rotationMotion;
+                _movable.transform.position += _positionMotion;
+                _movable.transform.rotation *= _rotationMotion;
 
                 return;
             }
             #endif
 
-            movable.AddInstantMovementVelocity(_positionMotion);
-            movable.OffsetRotation(_rotationMotion);
+            _movable.AddInstantMovementVelocity(_positionMotion);
+            _movable.OffsetRotation(_rotationMotion);
         }
         #endregion
     }

@@ -22,6 +22,10 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
         [Tooltip("Velocity coefficient to push and apply.")]
         [RequiredField]
         public FsmFloat Coefficient;
+
+        [Tooltip("Unique id associated with this coefficient - use the same to pop it (safe to use with 0 as value).")]
+        [RequiredField]
+        public FsmInt Id;
         #endregion
 
         #region Behaviour
@@ -29,6 +33,7 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             base.Reset();
 
             Coefficient = null;
+            Id          = null;
         }
 
         public override void OnEnter() {
@@ -38,12 +43,24 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Finish();
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         private void Push() {
             if (GetMovable(out Movable3D _movable)) {
-                _movable.PushVelocityCoef(Coefficient.Value);
+                _movable.PushVelocityCoef(GetVelocityId(Id.Value), Coefficient.Value);
             }
+        }
+        #endregion
+
+        #region Utility
+        public const int VelocityDefaultId = 7106843;
+
+        // -----------------------
+
+        public static int GetVelocityId(int _value) {
+            return (_value != 0) ? _value : VelocityDefaultId;
         }
         #endregion
     }
@@ -52,7 +69,7 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// <see cref="FsmStateAction"/> used to push a velocity coefficient on a <see cref="Movable3D"/>.
     /// </summary>
     [Tooltip("Pushes and apply a velocity coefficient on a Movable3D.")]
-    [ActionCategory("Movable 3D")]
+    [ActionCategory(CategoryName)]
     public sealed class Movable3DPushVelocityCoef : BaseMovable3DPushVelocityCoef {
         #region Global Members
         // -------------------------------------------
@@ -71,12 +88,13 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Movable = null;
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         public override bool GetMovable(out Movable3D _movable) {
 
             if (Movable.Value is Movable3D _temp) {
-
                 _movable = _temp;
                 return true;
             }

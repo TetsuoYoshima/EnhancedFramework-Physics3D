@@ -12,6 +12,10 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// </summary>
     public abstract class BaseMovable3DFSM : FsmStateAction {
         #region Global Members
+        public const string CategoryName = "Movable [3D]";
+
+        // -----------------------
+
         /// <summary>
         /// Get this fsm movable instance.
         /// </summary>
@@ -26,6 +30,10 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// </summary>
     public abstract class BaseCreatureMovable3DFSM : FsmStateAction {
         #region Global Members
+        public const string CategoryName = BaseMovable3DFSM.CategoryName;
+
+        // -----------------------
+
         /// <summary>
         /// Get this fsm movable instance.
         /// </summary>

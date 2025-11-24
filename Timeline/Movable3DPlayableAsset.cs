@@ -24,14 +24,22 @@ namespace EnhancedFramework.Physics3D.Timeline {
     /// </summary>
     /// <typeparam name="T">The <see cref="EnhancedPlayableBehaviour"/> playable for this asset.</typeparam>
     public abstract class Movable3DPlayableAsset<T> : EnhancedPlayableAsset<T, Movable3D>, IMovable3DPlayableAsset
-                                                      where T : EnhancedPlayableBehaviour<Movable3D>, new() { }
+                                                      where T : EnhancedPlayableBehaviour<Movable3D>, new() {
+        #region Global Members
+        public const string NamePrefix = "Movable [3D]/";
+        #endregion
+    }
 
     /// <summary>
     /// Base generic class for every <see cref="CreatureMovable3D"/> <see cref="PlayableAsset"/>.
     /// </summary>
     /// <typeparam name="T">The <see cref="EnhancedPlayableBehaviour"/> playable for this asset.</typeparam>
     public abstract class CreatureMovable3DPlayableAsset<T> : EnhancedPlayableAsset<T, CreatureMovable3D>, IMovable3DPlayableAsset
-                                                              where T : EnhancedPlayableBehaviour<CreatureMovable3D>, new() { }
+                                                              where T : EnhancedPlayableBehaviour<CreatureMovable3D>, new() {
+        #region Global Members
+        public const string NamePrefix = "Creature [3D]/";
+        #endregion
+    }
 
     // -------------------------------------------
     // Behaviours

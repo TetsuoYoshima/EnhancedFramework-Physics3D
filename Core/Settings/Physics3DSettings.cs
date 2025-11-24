@@ -15,13 +15,16 @@ namespace EnhancedFramework.Physics3D {
     /// <summary>
     /// 3D Physics related global settings.
     /// </summary>
-    [CreateAssetMenu(fileName = MenuPrefix + "Physics3DSettings", menuName = MenuPath + "Physics 3D", order = MenuOrder)]
+    [CreateAssetMenu(fileName = MenuPrefix + "Physics3DSettings", menuName = MenuPath + "Physics [3D]", order = MenuOrder)]
 	public sealed class Physics3DSettings : BaseSettings<Physics3DSettings> {
         #region Global Members
         [Section("Physics 3D Settings")]
 
         [Tooltip("If true, checks for NaN values during collision calculs")]
         public bool CheckForNAN = true;
+
+        [Tooltip("Only register and computes the first hit result for collisions if no collision effect can be applied")]
+        public bool CollisionOneHitIfNoEffect = true;
 
         [Space(10f), HorizontalLine(SuperColor.Grey, 1f), Space(10f)]
 
@@ -57,6 +60,42 @@ namespace EnhancedFramework.Physics3D {
 
         [Tooltip("Deceleration applied on an object force while in the air")]
         [Enhanced, Min(0f)] public float AirForceDeceleration       = 5f;
+
+        // -----------------------
+
+        [Space(10f), HorizontalLine(SuperColor.Green, 1f), Space(10f)]
+
+        [SerializeField] public PhysicsSurface3DMaterialDatabase[] PhysicsSurfaces = new PhysicsSurface3DMaterialDatabase[0];
+        #endregion
+
+        #region Physics Surface
+        /// <param name="_component"><see cref="Component"/> to get the associated settings.</param>
+        /// <inheritdoc cref="GetPhysicsSurface(Material, TagGroup)"/>
+        public PhysicsSurface3D.Settings GetPhysicsSurface(Material _material, Component _component) {
+            if (!_component.GetTags(out TagGroup _tags)) {
+                _tags = TagGroup.Empty;
+            }
+
+            return GetPhysicsSurface(_material, _tags);
+        }
+
+        /// <summary>
+        /// Get the <see cref="PhysicsSurface3D.Settings"/> associated with a specific material.
+        /// </summary>
+        /// <param name="_material"><see cref="Material"/> to get the associated settings.</param>
+        /// <param name="_tags"><see cref="TagGroup"/> used to get the right settings.</param>
+        /// <returns><see cref="PhysicsSurface3D.Settings"/> associated with the given values.</returns>
+        public PhysicsSurface3D.Settings GetPhysicsSurface(Material _material, TagGroup _tags) {
+
+            ref PhysicsSurface3DMaterialDatabase[] _span = ref PhysicsSurfaces;
+            for (int i = _span.Length; i-- > 0;) {
+                if (_span[i].GetSettings(_material, _tags, out PhysicsSurface3D.Settings _settings)) {
+                    return _settings;
+                }
+            }
+
+            return PhysicsSurface3D.Settings.Default;
+        }
         #endregion
     }
 }

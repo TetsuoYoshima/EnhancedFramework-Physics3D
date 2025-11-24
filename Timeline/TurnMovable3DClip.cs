@@ -16,8 +16,8 @@ namespace EnhancedFramework.Physics3D.Timeline {
     /// <summary>
     /// Makes a <see cref="CreatureMovable3D"/> turn to a specific forward axis.
     /// </summary>
-    [DisplayName("Creature/Turn")]
-    public class TurnMovable3DClip : CreatureMovable3DPlayableAsset<TurnMovable3DBehaviour> {
+    [DisplayName(NamePrefix + "Turn")]
+    public sealed class TurnMovable3DClip : CreatureMovable3DPlayableAsset<TurnMovable3DBehaviour> {
         #region Global Members
         public ExposedReference<Transform> Forward = new ExposedReference<Transform>();
         #endregion
@@ -122,9 +122,10 @@ namespace EnhancedFramework.Physics3D.Timeline {
 
             // Complete turn.
             if (CompleteOnExit) {
+                CreatureMovable3D _movable = Movable;
 
-                Movable.StopTurnTo();
-                Movable.SetRotation(Forward.rotation);
+                _movable.StopTurnTo();
+                _movable.SetRotation(Forward.rotation);
             }
         }
 

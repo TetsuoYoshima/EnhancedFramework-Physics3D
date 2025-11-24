@@ -16,8 +16,8 @@ namespace EnhancedFramework.Physics3D.Timeline {
     /// <summary>
     /// Makes a <see cref="CreatureMovable3D"/> navigate to a specific position.
     /// </summary>
-    [DisplayName("Creature/Navigation")]
-    public class NavigationMovable3DClip : CreatureMovable3DPlayableAsset<NavigationMovable3DBehaviour> {
+    [DisplayName(NamePrefix + "Navigation")]
+    public sealed class NavigationMovable3DClip : CreatureMovable3DPlayableAsset<NavigationMovable3DBehaviour> {
         #region Global Members
         [Space(10f)]
 
@@ -80,8 +80,10 @@ namespace EnhancedFramework.Physics3D.Timeline {
 
                 // Preview origin.
                 if (fromPosition.IsNull()) {
-                    fromPosition = Movable.transform.position;
-                    fromRotation = Movable.transform.rotation;
+                    Transform _transform = Movable.transform;
+
+                    fromPosition = _transform.position;
+                    fromRotation = _transform.rotation;
                 }
 
                 return;
@@ -103,7 +105,7 @@ namespace EnhancedFramework.Physics3D.Timeline {
             if (!Application.isPlaying) {
 
                 // Navigation preview.
-                Vector3 _position    = Vector3.Lerp(fromPosition, Position.position, GetNormalizedTime(_playable));
+                Vector3 _position    = Vector3.Lerp   (fromPosition, Position.position, GetNormalizedTime(_playable));
                 Quaternion _rotation = UseRotation
                                      ? Quaternion.Lerp(fromRotation, Position.rotation, GetNormalizedTime(_playable))
                                      : fromRotation;

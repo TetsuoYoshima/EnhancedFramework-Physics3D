@@ -38,7 +38,9 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Finish();
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         private void StopNavigation() {
             if (GetMovable(out CreatureMovable3D _movable)) {
@@ -58,7 +60,7 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// <see cref="FsmStateAction"/> used to stop a <see cref="CreatureMovable3D"/> current navigation.
     /// </summary>
     [Tooltip("Stops a Movable3D current navigation.")]
-    [ActionCategory("Movable 3D")]
+    [ActionCategory(CategoryName)]
     public sealed class Movable3DStopNavigation : BaseMovable3DStopNavigation {
         #region Global Members
         // -------------------------------------------
@@ -77,12 +79,13 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Movable = null;
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         public override bool GetMovable(out CreatureMovable3D _movable) {
 
             if (Movable.Value is CreatureMovable3D _temp) {
-
                 _movable = _temp;
                 return true;
             }

@@ -22,7 +22,9 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Finish();
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         private void Stop() {
             if (GetMovable(out CreatureMovable3D _movable)) {
@@ -36,7 +38,7 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// <see cref="FsmStateAction"/> used to stop the current turn operation of a <see cref="CreatureMovable3D"/>.
     /// </summary>
     [Tooltip("Stops the current turn operation of a Movable3D.")]
-    [ActionCategory("Movable 3D")]
+    [ActionCategory(CategoryName)]
     public sealed class Movable3DStopTurn : BaseMovable3DStopTurn {
         #region Global Members
         // -------------------------------------------
@@ -55,12 +57,13 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Movable = null;
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         public override bool GetMovable(out CreatureMovable3D _movable) {
 
             if (Movable.Value is CreatureMovable3D _temp) {
-
                 _movable = _temp;
                 return true;
             }

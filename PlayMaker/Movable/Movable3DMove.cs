@@ -51,11 +51,12 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Move();
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         private void Move() {
             if (GetMovable(out Movable3D _movable)) {
-
                 _movable.Move(Direction.Value);
             }
         }
@@ -66,7 +67,7 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
     /// <see cref="FsmStateAction"/> used to move a <see cref="Movable3D"/> in a direction.
     /// </summary>
     [Tooltip("Moves a Movable3D in a direction.")]
-    [ActionCategory("Movable 3D")]
+    [ActionCategory(CategoryName)]
     public sealed class Movable3DMove : BaseMovable3DMove {
         #region Global Members
         // -------------------------------------------
@@ -85,12 +86,13 @@ namespace EnhancedFramework.Physics3D.PlayMaker {
             Movable = null;
         }
 
-        // -----------------------
+        // -------------------------------------------
+        // Behaviour
+        // -------------------------------------------
 
         public override bool GetMovable(out Movable3D _movable) {
 
             if (Movable.Value is Movable3D _temp) {
-
                 _movable = _temp;
                 return true;
             }
