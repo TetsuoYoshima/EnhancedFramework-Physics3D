@@ -910,6 +910,8 @@ namespace EnhancedFramework.Physics3D {
 
             if (!_isGrounded && _movable.UseGravity) {
 
+                _operation.ClearTempHits();
+
                 // Iterate over collision impacts to find if one of these can be considered as ground.
                 // Use a reverse loop to get the last ground surface hit first.
 

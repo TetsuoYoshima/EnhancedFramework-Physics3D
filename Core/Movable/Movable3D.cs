@@ -651,6 +651,8 @@ namespace EnhancedFramework.Physics3D {
 
         [SerializeField, Enhanced, ReadOnly(nameof(CanEditSettings)), Block] protected Movable3DGroundSettings groundSettings = new Movable3DGroundSettings();
 
+        // -----------------------
+
         [Space(20f, order = 0), Title("Weight", order = 1), Space(5f, order = 2), PropertyOrder(22)]
 
         [SerializeField, Enhanced, ReadOnly(nameof(CanEditSettings)), Block] protected Movable3DWeightSettings weightSettings = new Movable3DWeightSettings();
@@ -1728,6 +1730,10 @@ namespace EnhancedFramework.Physics3D {
             AddMovementVelocity(_direction);
             return false;
         }
+
+        // -------------------------------------------
+        // Utility
+        // -------------------------------------------
 
         /// <summary>
         /// Makes this object move towards a given point.

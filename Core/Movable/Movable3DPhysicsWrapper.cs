@@ -271,8 +271,8 @@ namespace EnhancedFramework.Physics3D {
         public override CollisionGroundData3D ComputeGround(Movable3D _movable, CollisionOperationData3D _operation, ref bool _isGrounded, ref RaycastHit _groundHit) {
 
             // If didn't hit ground during movement, try to get it using two casts:
-            //  • A raycast from the collider bottom,
-            //  • Or a shapecast, if the previous raycast failed.
+            //  ï¿½ A raycast from the collider bottom,
+            //  ï¿½ Or a shapecast, if the previous raycast failed.
             //
             // Necessary when movement magnitude is inferior to default contact offset.
             //
@@ -406,6 +406,8 @@ namespace EnhancedFramework.Physics3D {
 
             List<Collider> _selfColliders = _movable.SelfColliders;
             int _count = _selfColliders.Count;
+
+            int _collisionMask = _movable.GetColliderMask();
 
             int _collisionMask = _movable.GetColliderMask();
 
@@ -861,6 +863,55 @@ namespace EnhancedFramework.Physics3D {
                 PhysicsCollider3D _physicsCollider = PhysicsCollider3D.GetTemp(_collider, _collisionMask);
                 _physicsCollider.UpdateTransformPosition();
             }
+        }
+
+        // -------------------------------------------
+        // Commands
+        // -------------------------------------------
+
+        public override void RegisterCastCommand   (Movable3D _movable, CollisionOperationData3D _operation, CastOperationCommands3D _commands, Vector3 _velocity) {
+            List<Collider> _selfColliders = _operation.SelfColliders;
+
+            int _collisionMask = _movable.GetColliderMask();
+            float _distance    = _velocity.magnitude;
+
+            int _count = _selfColliders.Count;
+            for (int i = 0; i < _count; i++) {
+
+                Collider _collider = _selfColliders[i];
+                if (!IsValid(_collider))
+                    continue;
+
+                _commands.RegisterCommand(_movable, _collider, _velocity, _distance, _collisionMask);
+            }
+        }
+
+        public override void RegisterOverlapCommand(Movable3D _movable, OverlapOperationCommands3D _commands) {
+            #if OVERLAP_COMMANDS
+            List<Collider> _selfColliders = _movable.SelfColliders;
+            int _collisionMask = _movable.GetColliderMask();
+
+            int _count = _selfColliders.Count;
+            for (int i = 0; i < _count; i++) {
+
+                Collider _collider = _selfColliders[i];
+                if (!IsValid(_collider))
+                    continue;
+
+                _commands.RegisterCommand(_movable, _collider, _collisionMask);
+            }
+            #else
+            _movable.LogErrorMessage("Overlap commands are only available in Unity version 2022.2 and above");
+            #endif
+        }
+
+        // -------------------------------------------
+        // Utility
+        // -------------------------------------------
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsValid(Collider _collider) {
+            return !_collider.isTrigger && _collider.enabled;
         }
         #endregion
     }
