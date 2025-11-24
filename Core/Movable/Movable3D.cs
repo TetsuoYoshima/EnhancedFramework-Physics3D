@@ -261,7 +261,11 @@ namespace EnhancedFramework.Physics3D {
 
             float _duration = Duration;
             if (_duration != 0f) {
+                #if DOTWEEN_ENABLED
                 LastMovement = DOVirtual.EasedValue(Vector3.zero, Movement, Timer / _duration, Curve);
+                #else
+                LastMovement = Vector3.Lerp(Vector3.zero, Movement, Curve.Evaluate(Timer / _duration));
+                #endif
             } else {
                 LastMovement = _template.LastMovement;
             }

@@ -409,8 +409,6 @@ namespace EnhancedFramework.Physics3D {
 
             int _collisionMask = _movable.GetColliderMask();
 
-            int _collisionMask = _movable.GetColliderMask();
-
             // Perform extract for each colliders.
             for (int i = 0; i < _count; i++) {
 
@@ -863,55 +861,6 @@ namespace EnhancedFramework.Physics3D {
                 PhysicsCollider3D _physicsCollider = PhysicsCollider3D.GetTemp(_collider, _collisionMask);
                 _physicsCollider.UpdateTransformPosition();
             }
-        }
-
-        // -------------------------------------------
-        // Commands
-        // -------------------------------------------
-
-        public override void RegisterCastCommand   (Movable3D _movable, CollisionOperationData3D _operation, CastOperationCommands3D _commands, Vector3 _velocity) {
-            List<Collider> _selfColliders = _operation.SelfColliders;
-
-            int _collisionMask = _movable.GetColliderMask();
-            float _distance    = _velocity.magnitude;
-
-            int _count = _selfColliders.Count;
-            for (int i = 0; i < _count; i++) {
-
-                Collider _collider = _selfColliders[i];
-                if (!IsValid(_collider))
-                    continue;
-
-                _commands.RegisterCommand(_movable, _collider, _velocity, _distance, _collisionMask);
-            }
-        }
-
-        public override void RegisterOverlapCommand(Movable3D _movable, OverlapOperationCommands3D _commands) {
-            #if OVERLAP_COMMANDS
-            List<Collider> _selfColliders = _movable.SelfColliders;
-            int _collisionMask = _movable.GetColliderMask();
-
-            int _count = _selfColliders.Count;
-            for (int i = 0; i < _count; i++) {
-
-                Collider _collider = _selfColliders[i];
-                if (!IsValid(_collider))
-                    continue;
-
-                _commands.RegisterCommand(_movable, _collider, _collisionMask);
-            }
-            #else
-            _movable.LogErrorMessage("Overlap commands are only available in Unity version 2022.2 and above");
-            #endif
-        }
-
-        // -------------------------------------------
-        // Utility
-        // -------------------------------------------
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsValid(Collider _collider) {
-            return !_collider.isTrigger && _collider.enabled;
         }
         #endregion
     }

@@ -12,6 +12,7 @@ namespace EnhancedFramework.Physics3D {
     /// Ready-to-use <see cref="Movable3D"/> for any moving object with simple collisions.
     /// </summary>
     [AddComponentMenu(FrameworkUtility.MenuPath + "Physics [3D]/Movable [3D]"), DisallowMultipleComponent]
+    #pragma warning disable CS0414
     public sealed class StandardMovable3D : Movable3D {
         #region Global Members
         #if UNITY_EDITOR
