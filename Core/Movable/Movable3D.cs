@@ -486,6 +486,9 @@ namespace EnhancedFramework.Physics3D {
         [Tooltip("Checks for Physics Surfaces on ground GameObjects")]
         PhysicsSurface      = 1 << 13,
 
+        [Tooltip("Interacts with triggers in the world area")]
+        Trigger             = 1 << 14,
+
         [Separator(SeparatorPosition.Top)]
 
         [Tooltip("Adjust this object shadow rotation according on the ground normal")]
@@ -508,7 +511,7 @@ namespace EnhancedFramework.Physics3D {
         // ----
         [Ethereal]
         All = Move | AutoExtract | RefreshContinuously | EqualizeVelocity
-            | RockBehaviour | SlideOnSurfaces | PhysicsSurface
+            | RockBehaviour | SlideOnSurfaces | PhysicsSurface | Trigger
             | SkipCollisionIfOverlap | ExtractOnlyIfOverlap | ExtractOnlyIfContact,
     }
 
@@ -587,7 +590,7 @@ namespace EnhancedFramework.Physics3D {
         [SerializeField] private PhysicsSystem3DType physicsSystem = PhysicsSystem3DType.Intermediate;
 
         [Tooltip("Additional options used to define this object behaviour")]
-        [SerializeField, Enhanced, ValidationMember(nameof(SetOption))] private MovableOption options = MovableOption.Move | MovableOption.AutoExtract | MovableOption.SlideOnSurfaces;
+        [SerializeField, Enhanced, ValidationMember(nameof(SetOption))] private MovableOption options = MovableOption.Move | MovableOption.AutoExtract | MovableOption.SlideOnSurfaces | MovableOption.Trigger;
 
         [Space(10f)]
 
@@ -2464,6 +2467,8 @@ namespace EnhancedFramework.Physics3D {
         /// Refreshes this object trigger interaction.
         /// </summary>
         protected void RefreshTriggers() {
+            if (!detectTrigger)
+                return;
 
             // Overlapping triggers.
             int _amount = TriggerOverlap();
@@ -2553,6 +2558,8 @@ namespace EnhancedFramework.Physics3D {
         /// Exits from all overlapping triggers.
         /// </summary>
         protected void ExitTriggers() {
+            if (!detectTrigger)
+                return;
 
             List<ITrigger> _overlappingTriggers = overlappingTriggers.collection;
             for (int i = _overlappingTriggers.Count; i-- > 0;) {
@@ -2716,7 +2723,7 @@ namespace EnhancedFramework.Physics3D {
         /// Refreshes this object current physics surface.
         /// </summary>
         private void RefreshPhysicsSurface(CollisionOperationData3D _operation, bool _isGrounded, RaycastHit _hit) {
-            if (!HasOption(MovableOption.PhysicsSurface))
+            if (!usePhysicsSurface)
                 return;
 
             PhysicsSurface3D.Settings _surface = PhysicsSurface3D.Settings.Default;
@@ -2997,6 +3004,7 @@ namespace EnhancedFramework.Physics3D {
         [SerializeField, HideInInspector] private bool usePhysicsSurface        = false;
         [SerializeField, HideInInspector] private bool slideOnSurfaces          = false;
         [SerializeField, HideInInspector] private bool rockBehaviour            = false;
+        [SerializeField, HideInInspector] private bool detectTrigger            = false;
 
         [SerializeField, HideInInspector] private bool refreshContinuously      = false;
         [SerializeField, HideInInspector] private bool equalizeVelocity         = false;
@@ -3050,6 +3058,7 @@ namespace EnhancedFramework.Physics3D {
             usePhysicsSurface      = HasOption(MovableOption.PhysicsSurface);
             slideOnSurfaces        = HasOption(MovableOption.SlideOnSurfaces);
             rockBehaviour          = HasOption(MovableOption.RockBehaviour);
+            detectTrigger          = HasOption(MovableOption.Trigger);
 
             // Basic features.
             refreshContinuously    = HasOption(MovableOption.RefreshContinuously);
@@ -3120,6 +3129,13 @@ namespace EnhancedFramework.Physics3D {
         /// </summary>
         public bool RockBehaviour {
             get { return rockBehaviour; }
+        }
+
+        /// <summary>
+        /// Detects and interacts with triggers in the game world.
+        /// </summary>
+        public bool DetectTrigger {
+            get { return detectTrigger; }
         }
 
         // -----------------------
