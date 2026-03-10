@@ -1,8 +1,8 @@
-// ===== Enhanced Framework - https://github.com/LucasJoestar/EnhancedFramework-Physics3D ===== //
+// ===== Enhanced Framework - https://github.com/TetsuoYoshima/EnhancedFramework-Physics3D ===== //
 //
 // Notes:
 //
-// ============================================================================================ //
+// ============================================================================================= //
 
 using EnhancedEditor;
 using EnhancedFramework.Core;
@@ -95,7 +95,7 @@ namespace EnhancedFramework.Physics3D {
         #region Enhanced Behaviour
         protected override void OnInit() {
             // Settings.
-            SetAttributesSettings();
+            SetAttributesSettings(attributes);
 
             base.OnInit();
         }
@@ -109,7 +109,10 @@ namespace EnhancedFramework.Physics3D {
             base.OnValidate();
 
             // Settings.
-            SetAttributesSettings();
+            ref CreatureMovable3DAttributes _attributes = ref attributes;
+            if (_attributes != null) {
+                SetAttributesSettings(_attributes);
+            }
         }
         #endif
 
@@ -117,9 +120,9 @@ namespace EnhancedFramework.Physics3D {
         // Utility
         // -------------------------------------------
 
-        private void SetAttributesSettings() {
-            groundSettings = attributes.GroundSettings;
-            weightSettings = attributes.WeightSettings;
+        private void SetAttributesSettings(CreatureMovable3DAttributes _attributes) {
+            groundSettings = _attributes.GroundSettings;
+            weightSettings = _attributes.WeightSettings;
         }
         #endregion
 
@@ -312,6 +315,13 @@ namespace EnhancedFramework.Physics3D {
 
         private Action onTurnComplete = null;
         private float turnTimeVar = 0f;
+
+        /// <summary>
+        /// Indicates if this object is currently performing any turning operation.
+        /// </summary>
+        public bool IsTurning {
+            get { return !forward.IsNull(); }
+        }
 
         // -----------------------
 

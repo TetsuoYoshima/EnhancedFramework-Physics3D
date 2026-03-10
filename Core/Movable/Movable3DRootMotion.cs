@@ -1,8 +1,8 @@
-// ===== Enhanced Framework - https://github.com/LucasJoestar/EnhancedFramework-Physics3D ===== //
+// ===== Enhanced Framework - https://github.com/TetsuoYoshima/EnhancedFramework-Physics3D ===== //
 //
 // Notes:
 //
-// ============================================================================================ //
+// ============================================================================================= //
 
 using EnhancedEditor;
 using EnhancedFramework.Core;
@@ -18,13 +18,24 @@ namespace EnhancedFramework.Physics3D {
     [AddComponentMenu(FrameworkUtility.MenuPath + "Physics [3D]/Movable Root Motion [3D]"), DisallowMultipleComponent]
     public sealed class Movable3DRootMotion : EnhancedBehaviour {
         #region Global Members
-        [Section("Root Motion")]
+        [Section("Movable Root Motion [3D]")]
 
+        [Tooltip("Movable instance associated with this object")]
         [SerializeField, Enhanced, Required] private Movable3D movable = null;
 
         // -----------------------
 
         [SerializeField, HideInInspector] private EnhancedAnimatorHandler animator = null;
+
+        // -----------------------
+
+        /// <summary>
+        /// <see cref="Movable3D"/> instance associated with this object.
+        /// </summary>
+        public Movable3D Movable {
+            get { return movable; }
+            set { movable = value; }
+        }
         #endregion
 
         #region Enhanced Behaviour

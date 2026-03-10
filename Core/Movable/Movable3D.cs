@@ -1,8 +1,8 @@
-﻿// ===== Enhanced Framework - https://github.com/LucasJoestar/EnhancedFramework-Physics3D ===== //
+﻿// ===== Enhanced Framework - https://github.com/TetsuoYoshima/EnhancedFramework-Physics3D ===== //
 //
 // Notes:
 //
-// ============================================================================================ //
+// ============================================================================================= //
 
 #if UNITY_2022_2_OR_NEWER
 #define OVERLAP_COMMANDS
@@ -24,27 +24,14 @@ using Range = EnhancedEditor.RangeAttribute;
 
 namespace EnhancedFramework.Physics3D {
     /// <summary>
-    /// Interface to inherit any sensitive moving object on which to maintain control from.
-    /// <para/>
-    /// Provides multiple common utilities to properly move an object in space.
+    /// 3D-space version of <see cref="IMovable"/>.
     /// </summary>
-    public interface IMovable3D {
+    public interface IMovable3D : IMovable {
         #region Content
         /// <summary>
         /// This object <see cref="UnityEngine.Rigidbody"/>.
         /// </summary>
         Rigidbody Rigidbody { get; }
-
-        /// <summary>
-        /// Get / set this object world position.
-        /// <br/> Use this instead of <see cref="Transform.position"/>.
-        /// </summary>
-        Vector3 Position { get; set; }
-
-        /// <summary>
-        /// Get / set this object world rotation.
-        /// <br/> Use this instead of <see cref="Transform.rotation"/>.
-        Quaternion Rotation { get; set; }
         #endregion
     }
 
@@ -737,17 +724,13 @@ namespace EnhancedFramework.Physics3D {
             get { return physicsSurface; }
         }
 
-        /// <summary>
-        /// The current position of this object.
-        /// </summary>
+        /// <inheritdoc/>
         public Vector3 Position {
             get { return rigidbody.position; }
             set { SetPosition(value); }
         }
 
-        /// <summary>
-        /// The current rotation of this object.
-        /// </summary>
+        /// <inheritdoc/>
         public Quaternion Rotation {
             get { return rigidbody.rotation; }
             set { SetRotation(value); }
@@ -1233,7 +1216,7 @@ namespace EnhancedFramework.Physics3D {
         /// <returns>True to perform an extract operation, false otherwise.</returns>
         internal bool LogicEarlyUpdate(bool _isPaused, out bool _performCollisions, out ExtractOperation3D _extractOperation) {
 
-            // Avoid calculs when the game is paused - reset frame velocity to also avoid cumulating force and movement from the previous frames.
+            // Avoid calculs when the object is paused - reset frame velocity to also avoid cumulating force and movement from the previous frames.
             if (_isPaused || isAsleep) {
 
                 Velocity.ResetFrameVelocity();
@@ -2893,10 +2876,7 @@ namespace EnhancedFramework.Physics3D {
         // --- Utility --- \\
 
         #region Transform
-        /// <summary>
-        /// Sets this object position.
-        /// <br/> Use this instead of setting <see cref="Transform.position"/>.
-        /// </summary>
+        /// <inheritdoc/>
         public virtual void SetPosition(Vector3 _position) {
             rigidbody.position = _position;
             transform.position = _position;
@@ -2904,10 +2884,7 @@ namespace EnhancedFramework.Physics3D {
             shouldBeRefreshed = true;
         }
 
-        /// <summary>
-        /// Sets this object rotation.
-        /// <br/> Use this instead of setting <see cref="Transform.rotation"/>.
-        /// </summary>
+        /// <inheritdoc/>
         public virtual void SetRotation(Quaternion _rotation) {
             rigidbody.rotation = _rotation;
             transform.rotation = _rotation;
@@ -2915,17 +2892,14 @@ namespace EnhancedFramework.Physics3D {
             shouldBeRefreshed = true;
         }
 
-        /// <summary>
-        /// Sets this object position and rotation.
-        /// <br/> Use this instead of setting <see cref="Transform.position"/> and <see cref="Transform.rotation"/>.
-        /// </summary>
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetPositionAndRotation(Vector3 _position, Quaternion _rotation) {
             SetPosition(_position);
             SetRotation(_rotation);
         }
 
-        /// <inheritdoc cref="SetPositionAndRotation(Vector3, Quaternion)"/>
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetPositionAndRotation(Transform _transform, bool _useLocal = false) {
             Vector3 _position;
@@ -2944,19 +2918,13 @@ namespace EnhancedFramework.Physics3D {
 
         // -----------------------
 
-        /// <summary>
-        /// Adds an offset to this object position.
-        /// </summary>
-        /// <param name="_offset">Transform position offset.</param>
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OffsetPosition(Vector3 _offset) {
             SetPosition(Position + _offset);
         }
 
-        /// <summary>
-        /// Adds an offset to this object rotation.
-        /// </summary>
-        /// <param name="_offset">Transform rotation offset.</param>
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OffsetRotation(Quaternion _offset) {
             SetRotation(Rotation * _offset);

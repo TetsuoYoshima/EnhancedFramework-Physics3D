@@ -1,8 +1,8 @@
-// ===== Enhanced Framework - https://github.com/LucasJoestar/EnhancedFramework-Physics3D ===== //
+// ===== Enhanced Framework - https://github.com/TetsuoYoshima/EnhancedFramework-Physics3D ===== //
 //
 // Notes:
 //
-// ============================================================================================ //
+// ============================================================================================= //
 
 #if UNITY_2022_2_OR_NEWER
 #define CAST_MULTI_HIT
